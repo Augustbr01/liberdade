@@ -6,6 +6,17 @@ import {WebSocket} from "ws"
 const servidoresDoUsuario = new Map<string,Set<string>>();
 const membrosServidores = new Map<string,Set<string>>();
 
+/** Antes do PRESENCA_INICIAL: evita lista de membros/servidores desatualizada no cache. */
+export function refrescarCacheSnapshot(usuarioId: string) {
+    const servidores = servidoresDoUsuario.get(usuarioId);
+    if (servidores) {
+        for (const servidorId of servidores) {
+            membrosServidores.delete(servidorId);
+        }
+    }
+    servidoresDoUsuario.delete(usuarioId);
+}
+
 export async function buscarServidoresUsuario(idUsuario : string) {
 
     const existe = servidoresDoUsuario.get(idUsuario);

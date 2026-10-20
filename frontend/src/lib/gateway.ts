@@ -12,6 +12,7 @@ let ws: WebSocket | null = null;
 let tentativa = 0;
 let desligado = true; // começa desligado; conectar() liga ao logar
 let reconexao: number | undefined;
+let jaTeveConexao = false;
 // o snapshot de presença chega logo ao abrir o socket; quem assina depois ainda precisa ver
 let ultimaPresencaInicial: Extract<EventoGateway, { tipo: "PRESENCA_INICIAL" }> | null = null;
 
@@ -30,8 +31,10 @@ function abrir() {
     atual.onopen = () => {
         tentativa = 0;
         // (re)conectou: avisa quem precisa rebuscar o snapshot (pode ter perdido
-        // eventos enquanto a conexão esteve caída)
-        ouvintesReconexao.forEach((f) => f());
+        // eventos enquanto a conexão esteve caída). Na 1ª conexão não dispara: senão
+        // zera a presença logo antes do PRESENCA_INICIAL chegar.
+        if (jaTeveConexao) ouvintesReconexao.forEach((f) => f());
+        jaTeveConexao = true;
     };
 
     atual.onmessage = (e) => {
@@ -71,6 +74,7 @@ export const gateway = {
     desconectar() {
         desligado = true;
         tentativa = 0;
+        jaTeveConexao = false;
         ultimaPresencaInicial = null;
         window.clearTimeout(reconexao);
         ws?.close();

@@ -1,7 +1,7 @@
 import {WebSocket} from "ws"
 import {Status, type Evento} from "../interface/Evento"
 import { prisma } from "../../lib/prisma";
-import { avisarPresenca, buscarMembrosServidor, buscarServidoresUsuario } from "./eventosPresenca";
+import { avisarPresenca, buscarMembrosServidor, buscarServidoresUsuario, refrescarCacheSnapshot } from "./eventosPresenca";
 const conexoes = new Map<string,Set<WebSocket>>();
 const vivos = new WeakMap<WebSocket,boolean>();
 const online = new Set<string>();
@@ -74,6 +74,7 @@ export function marcarVivo(ws : WebSocket) {
 }
 
 export async function enviarSnapshot(usuarioId: string,ws: WebSocket) {
+    refrescarCacheSnapshot(usuarioId);
     const servidores = await buscarServidoresUsuario(usuarioId);
 
     const listas = await Promise.all([...servidores].map((e) => buscarMembrosServidor(e)));
@@ -90,8 +91,8 @@ export async function enviarSnapshot(usuarioId: string,ws: WebSocket) {
 
     onlines.delete(usuarioId);
 
-    if(ws.readyState === ws.OPEN) {
-        ws.send(JSON.stringify({tipo:"PRESENCA_INICIAL",online:[...onlines]}));
+    if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ tipo: "PRESENCA_INICIAL", online: [...onlines] }));
     }
 }
 
@@ -100,7 +101,7 @@ export async function publicarParaUsuarios(ids : string[], evento: Evento) {
 
     for(const id of ids) {
         conexoes.get(id)?.forEach((ws) => {
-            if(ws.readyState === ws.OPEN) ws.send(msg);
+            if (ws.readyState === WebSocket.OPEN) ws.send(msg);
         })
     }
 }
