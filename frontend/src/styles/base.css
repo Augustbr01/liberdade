@@ -186,6 +186,26 @@ kbd {
     color: var(--texto);
 }
 
+/* ação que não tem volta (apagar) */
+.botao-perigo {
+    background: var(--perigo);
+    color: #fff;
+}
+
+.botao-perigo:hover:not(:disabled) {
+    background: #ef5f64;
+}
+
+/* a mesma ação perigosa, mas discreta (ex.: no cartão de perfil) */
+.botao-perigo-contorno {
+    border: 1px solid rgba(229, 72, 77, 0.35);
+    color: var(--perigo);
+}
+
+.botao-perigo-contorno:hover:not(:disabled) {
+    background: var(--perigo-suave);
+}
+
 .botao-grande {
     height: 44px;
     padding: 0 20px;
@@ -367,18 +387,6 @@ select.campo {
     pointer-events: none;
     box-shadow: var(--sombra);
     animation: aparecer 0.12s ease;
-}
-
-.dica-cima {
-    transform: translate(-50%, -100%);
-}
-
-.dica-baixo {
-    transform: translate(-50%, 0);
-}
-
-.dica-direita {
-    transform: translate(0, -50%);
 }
 
 /* ---------- menus e popovers ---------- */

@@ -1,11 +1,14 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, Hash, Loader2, Plus, Settings, Trash2, UserPlus, Volume2 } from "lucide-react";
+import { ChevronDown, DoorOpen, Hash, Loader2, Plus, Settings, Trash2, UserPlus, Volume2 } from "lucide-react";
 import type { Canal, ServidorDetalhe, TipoCanal, Usuario } from "../api";
 import { useControleVoz } from "../contexto/ControleVoz";
+import { chaveTela, useFocoChamada } from "../contexto/FocoChamada";
+import { usePerfil } from "../contexto/Perfil";
 import { useCliqueFora } from "../hooks/useCliqueFora";
 import type { MapaMembros, Voz } from "../tipos";
 import { PessoasAoVivo } from "./chamada/AoVivo";
 import { PainelVoz } from "./chamada/PainelVoz";
+import { TempoSala } from "./chamada/TempoSala";
 import { PainelUsuario } from "./PainelUsuario";
 import { Avatar } from "./ui/Avatar";
 import { Dica } from "./ui/Dica";
@@ -23,8 +26,13 @@ type Props = {
     onApagarCanal: (canal: Canal) => void;
     onConvidar: () => void;
     onNovoCanal: (tipo: TipoCanal) => void;
+    onConfiguracoes: () => void;
+    // o dono não sai (o servidor ficaria sem dono): pra ele o menu não tem "Sair"
+    souDono: boolean;
+    onSairServidor: () => void;
     onAbrirChamada: () => void;
     onSairChamada: () => void;
+    onEditarFoto: () => void;
     onSairConta: () => void;
 };
 
@@ -32,6 +40,20 @@ type Props = {
 export function PainelCanais(props: Props) {
     const { servidor, carregando, canalAtualId, voz, entrandoEm, eu, souAdmin, membros } = props;
     const { surdo } = useControleVoz();
+    const { focar, focarAoEntrar } = useFocoChamada();
+    const { abrirPerfil } = usePerfil();
+
+    // "ao vivo" de alguém na sala: destaca a tela dessa pessoa e abre a chamada
+    // "ao vivo" numa sala em que você não está: entra e já abre a tela da pessoa
+    function entrarEAssistir(canal: Canal, identity: string) {
+        focarAoEntrar(chaveTela(identity));
+        props.onCanal(canal);
+    }
+
+    function assistir(identity: string) {
+        focar(chaveTela(identity));
+        props.onAbrirChamada();
+    }
 
     const texto = servidor?.canais.filter((c) => c.tipo === "TEXTO") ?? [];
     const salas = servidor?.canais.filter((c) => c.tipo === "VOZ") ?? [];
@@ -44,6 +66,9 @@ export function PainelCanais(props: Props) {
                     souAdmin={souAdmin}
                     onConvidar={props.onConvidar}
                     onNovoCanal={props.onNovoCanal}
+                    onConfiguracoes={props.onConfiguracoes}
+                    souDono={props.souDono}
+                    onSair={props.onSairServidor}
                 />
             ) : (
                 <div className="painel-canais-topo">
@@ -83,20 +108,41 @@ export function PainelCanais(props: Props) {
                                             >
                                                 <Volume2 size={18} className="canal-icone" />
                                                 <span className="truncar">{c.nome}</span>
+                                                {/* há quanto tempo a chamada da sala está rolando (pra quem está fora também) */}
+                                                {c.inicioCall && (pessoas.length > 0 || conectado) && (
+                                                    <TempoSala inicio={c.inicioCall} className="canal-tempo" />
+                                                )}
                                                 {entrandoEm === c.id && <Loader2 size={14} className="girar canal-carregando" />}
                                             </button>
                                             {souAdmin && <AcoesCanal canal={c} onApagar={props.onApagarCanal} />}
                                         </div>
 
                                         {conectado ? (
-                                            <PessoasAoVivo membros={membros} eu={eu} surdo={surdo} />
+                                            <PessoasAoVivo membros={membros} eu={eu} surdo={surdo} onAssistir={assistir} />
                                         ) : (
                                             pessoas.length > 0 && (
                                                 <ul className="voz-pessoas">
                                                     {pessoas.map((p) => (
                                                         <li key={p.id}>
-                                                            <Avatar nome={p.nome} url={p.avatarUrl} tamanho={22} />
-                                                            <span className="truncar">{p.nome}</span>
+                                                            <button
+                                                                className="voz-pessoa-quem"
+                                                                onClick={(e) => abrirPerfil(p, e.currentTarget)}
+                                                                aria-haspopup="dialog"
+                                                            >
+                                                                <Avatar nome={p.nome} url={p.avatarUrl} tamanho={22} />
+                                                                <span className="truncar">{p.nome}</span>
+                                                            </button>
+                                                            {c.telas?.includes(p.id) && (
+                                                                <span className="voz-pessoa-estado">
+                                                                    <button
+                                                                        className="voz-ao-vivo"
+                                                                        onClick={() => entrarEAssistir(c, p.id)}
+                                                                        title={`Entrar e assistir a tela de ${p.nome}`}
+                                                                    >
+                                                                        Ao vivo
+                                                                    </button>
+                                                                </span>
+                                                            )}
                                                         </li>
                                                     ))}
                                                 </ul>
@@ -113,7 +159,12 @@ export function PainelCanais(props: Props) {
             </nav>
 
             {voz && <PainelVoz voz={voz} onAbrir={props.onAbrirChamada} onSair={props.onSairChamada} />}
-            <PainelUsuario eu={eu} salaAtual={voz?.canal.nome ?? null} onSair={props.onSairConta} />
+            <PainelUsuario
+                eu={eu}
+                salaAtual={voz?.canal.nome ?? null}
+                onEditarFoto={props.onEditarFoto}
+                onSair={props.onSairConta}
+            />
         </aside>
     );
 }
@@ -121,18 +172,22 @@ export function PainelCanais(props: Props) {
 type CabecalhoProps = {
     servidor: ServidorDetalhe;
     souAdmin: boolean;
+    souDono: boolean;
+    onSair: () => void;
     onConvidar: () => void;
     onNovoCanal: (tipo: TipoCanal) => void;
+    onConfiguracoes: () => void;
 };
 
-// nome do servidor; pra admin vira um menu com as ações do servidor
-function CabecalhoServidor({ servidor, souAdmin, onConvidar, onNovoCanal }: CabecalhoProps) {
+// nome do servidor; vira um menu: admin tem as ações do servidor, e quem não é dono pode sair
+function CabecalhoServidor({ servidor, souAdmin, souDono, onConvidar, onNovoCanal, onConfiguracoes, onSair }: CabecalhoProps) {
     const [aberto, setAberto] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
     const fechar = useCallback(() => setAberto(false), []);
     useCliqueFora(ref, aberto, fechar);
 
-    if (!souAdmin) {
+    // sem nada pra mostrar no menu (não acontece hoje: o dono sempre é admin)
+    if (!souAdmin && souDono) {
         return (
             <div className="painel-canais-topo">
                 <strong className="truncar">{servidor.nome}</strong>
@@ -159,16 +214,32 @@ function CabecalhoServidor({ servidor, souAdmin, onConvidar, onNovoCanal }: Cabe
 
             {aberto && (
                 <div className="menu menu-servidor" role="menu">
-                    <button role="menuitem" className="menu-item" onClick={() => executar(onConvidar)}>
-                        Convidar pessoas <UserPlus size={16} />
-                    </button>
-                    <span className="menu-separador" />
-                    <button role="menuitem" className="menu-item" onClick={() => executar(() => onNovoCanal("TEXTO"))}>
-                        Criar canal de texto <Hash size={16} />
-                    </button>
-                    <button role="menuitem" className="menu-item" onClick={() => executar(() => onNovoCanal("VOZ"))}>
-                        Criar sala de voz <Volume2 size={16} />
-                    </button>
+                    {souAdmin && (
+                        <>
+                            <button role="menuitem" className="menu-item" onClick={() => executar(onConvidar)}>
+                                Convidar pessoas <UserPlus size={16} />
+                            </button>
+                            <span className="menu-separador" />
+                            <button role="menuitem" className="menu-item" onClick={() => executar(() => onNovoCanal("TEXTO"))}>
+                                Criar canal de texto <Hash size={16} />
+                            </button>
+                            <button role="menuitem" className="menu-item" onClick={() => executar(() => onNovoCanal("VOZ"))}>
+                                Criar sala de voz <Volume2 size={16} />
+                            </button>
+                            <span className="menu-separador" />
+                            <button role="menuitem" className="menu-item" onClick={() => executar(onConfiguracoes)}>
+                                Configurações do servidor <Settings size={16} />
+                            </button>
+                        </>
+                    )}
+                    {!souDono && (
+                        <>
+                            {souAdmin && <span className="menu-separador" />}
+                            <button role="menuitem" className="menu-item menu-item-perigo" onClick={() => executar(onSair)}>
+                                Sair do servidor <DoorOpen size={16} />
+                            </button>
+                        </>
+                    )}
                 </div>
             )}
         </div>

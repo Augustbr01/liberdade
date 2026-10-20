@@ -10,6 +10,56 @@
     flex-direction: column;
 }
 
+/* "fulano está digitando…" logo acima do compositor.
+   altura fixa (sempre presente) pra o compositor não pular quando aparece/some */
+.chat-digitando {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 22px;
+    padding: 0 18px;
+    font-size: 12.5px;
+    color: var(--texto-2);
+    overflow: hidden;
+}
+
+.chat-digitando .truncar {
+    min-width: 0;
+}
+
+.chat-digitando-pontos {
+    display: inline-flex;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.chat-digitando-pontos i {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--texto-3);
+    animation: digitando-pulo 1.3s infinite ease-in-out;
+}
+
+.chat-digitando-pontos i:nth-child(2) {
+    animation-delay: 0.18s;
+}
+
+.chat-digitando-pontos i:nth-child(3) {
+    animation-delay: 0.36s;
+}
+
+@keyframes digitando-pulo {
+    0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.35;
+    }
+    30% {
+        transform: translateY(-3px);
+        opacity: 1;
+    }
+}
+
 .chat-rolagem {
     flex: 1;
     min-height: 0;
@@ -95,6 +145,7 @@
 /* ---------- mensagem ---------- */
 
 .mensagem {
+    position: relative;
     display: grid;
     grid-template-columns: 64px minmax(0, 1fr);
     padding: 2px 16px 2px 0;
@@ -144,6 +195,23 @@
     font-weight: 600;
 }
 
+/* foto e nome de quem mandou: abrem o perfil */
+.mensagem-avatar {
+    display: grid;
+    height: fit-content;
+    border-radius: 50%;
+}
+
+.mensagem-autor {
+    min-width: 0;
+    text-align: left;
+}
+
+.mensagem-autor:hover strong {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
 .mensagem-topo time {
     font-size: 12px;
     color: var(--texto-3);
@@ -171,6 +239,232 @@
 .mensagem-editada {
     font-size: 11px;
     color: var(--texto-4);
+}
+
+/* ações da mensagem (editar, apagar): aparecem no hover, no canto de cima */
+.mensagem-acoes {
+    position: absolute;
+    top: -14px;
+    right: 16px;
+    z-index: 1;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 7px;
+    background: var(--fundo-2);
+    border: 1px solid var(--borda-2);
+    box-shadow: var(--sombra);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s;
+}
+
+.mensagem:hover .mensagem-acoes,
+.mensagem:focus-within .mensagem-acoes {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* editando: o texto vira um campo no mesmo lugar */
+.mensagem-em-edicao,
+.mensagem-em-edicao:hover {
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.mensagem-editor {
+    padding: 2px 0 6px;
+}
+
+.mensagem-editor-campo {
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--fundo-3);
+    border: 1px solid var(--borda-3);
+}
+
+.mensagem-editor-campo textarea {
+    display: block;
+    width: 100%;
+    max-height: 220px;
+    padding: 0;
+    resize: none;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--texto);
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.mensagem-editor-dica {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--texto-3);
+}
+
+.mensagem-editor-dica button {
+    color: var(--texto);
+    font-weight: 500;
+}
+
+.mensagem-editor-dica button:hover:not(:disabled) {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* imagens/GIFs da mensagem (links de imagem viram a própria imagem) */
+.mensagem-midias {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.midia {
+    position: relative;
+    display: block;
+    max-width: min(420px, 100%);
+    overflow: hidden;
+    border-radius: 8px;
+    border: 1px solid var(--borda-2);
+    background: var(--fundo-3);
+    cursor: zoom-in;
+}
+
+.midia img {
+    display: block;
+    max-width: 100%;
+    max-height: 320px;
+    width: auto;
+    height: auto;
+}
+
+/* enquanto baixa: um espaço reservado brilhando, no lugar da imagem */
+.midia.carregando {
+    width: 240px;
+    height: 160px;
+    background: linear-gradient(90deg, #1b1b1f 0%, #242428 50%, #1b1b1f 100%);
+    background-size: 200% 100%;
+    animation: brilho 1.4s ease-in-out infinite;
+}
+
+/* a imagem ocupa o espaço reservado (invisível) enquanto baixa: com 0x0 o navegador
+   acha que ela não está na tela e o loading="lazy" nunca pede o arquivo */
+.midia.carregando img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+}
+
+.midia-gif {
+    position: absolute;
+    left: 6px;
+    bottom: 6px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.62);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--texto);
+    pointer-events: none;
+}
+
+/* a imagem não carregou: volta a ser o link */
+.midia-link {
+    font-size: 15px;
+    color: var(--texto);
+    text-decoration: underline;
+    text-decoration-color: var(--texto-4);
+    text-underline-offset: 2px;
+    overflow-wrap: anywhere;
+}
+
+/* imagem em tamanho grande, por cima de tudo */
+.visualizador {
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 56px 24px 24px;
+    background: rgba(0, 0, 0, 0.86);
+    animation: aparecer 0.15s ease;
+}
+
+.visualizador img {
+    max-width: 100%;
+    max-height: calc(100dvh - 140px);
+    object-fit: contain;
+    border-radius: 6px;
+    box-shadow: var(--sombra-forte);
+}
+
+.visualizador-fechar {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    color: var(--texto-2);
+    transition: background 0.12s, color 0.12s;
+}
+
+.visualizador-fechar:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--texto);
+}
+
+.visualizador-original {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    color: var(--texto-2);
+    text-decoration: none;
+}
+
+.visualizador-original:hover {
+    color: var(--texto);
+    text-decoration: underline;
+}
+
+/* confirmação de apagar: a mensagem aparece como no chat */
+.apagar-previa {
+    display: flex;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--fundo-1);
+    border: 1px solid var(--borda-2);
+}
+
+.apagar-previa-corpo {
+    min-width: 0;
+}
+
+/* mensagem comprida não estoura o diálogo */
+.apagar-previa-texto {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+    overflow: hidden;
+}
+
+.apagar-dica {
+    font-size: 12.5px;
+    color: var(--texto-3);
 }
 
 .mensagem-enviando .mensagem-texto {

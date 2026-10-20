@@ -34,6 +34,7 @@ model Usuario {
   membrosDe UsuarioServidor[]
   mensagens Mensagem[]
   convites Convite[]
+  banimentos BanimentoServidor[]
   @@map("usuarios")
 }
 
@@ -48,7 +49,7 @@ model Servidor {
   canais Canal[]
   convites Convite[]
   membros UsuarioServidor[]
-
+  banimentos BanimentoServidor[]
   @@map("servidores")
 }
 
@@ -93,11 +94,25 @@ model Convite {
   @@map("convites")
 }
 
+model BanimentoServidor {
+  id String @id @db.Uuid @default(uuid(7))
+  usuarioId String @db.Uuid
+  servidorId String @db.Uuid
+  criadoEm DateTime
+
+  @@unique([usuarioId,servidorId])
+  @@index([servidorId])
+  @@map("banimento_servidor")
+
+  usuario Usuario @relation(fields: [usuarioId],references: [id],onDelete: Cascade)
+  servidor Servidor @relation(fields: [servidorId],references: [id],onDelete: Cascade)
+}
+
 model Mensagem {
   id String @id @db.Uuid @default(uuid(7))
   canalId String @db.Uuid
   autorId String @db.Uuid
-  conteudo String @db.VarChar(200)
+  conteudo String @db.VarChar(1000)
   editadaEm DateTime?
   criadoEm DateTime @default(now())
 

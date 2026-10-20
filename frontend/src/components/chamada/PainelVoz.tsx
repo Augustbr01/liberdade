@@ -1,6 +1,7 @@
-import { useConnectionState, useTrackToggle } from "@livekit/components-react";
-import { ConnectionState, Track } from "livekit-client";
+import { useConnectionState } from "@livekit/components-react";
+import { ConnectionState } from "livekit-client";
 import { MonitorUp, MonitorX, PhoneOff, Signal, Video, VideoOff } from "lucide-react";
+import { useControleVoz } from "../../contexto/ControleVoz";
 import { useAgora } from "../../hooks/useAgora";
 import { cronometro } from "../../lib/util";
 import type { Voz } from "../../tipos";
@@ -11,12 +12,8 @@ type Props = { voz: Voz; onAbrir: () => void; onSair: () => void };
 // fica no rodapé da lista de canais enquanto você está numa sala
 export function PainelVoz({ voz, onAbrir, onSair }: Props) {
     const estado = useConnectionState();
-    const camera = useTrackToggle({ source: Track.Source.Camera, onDeviceError: () => {} });
-    const tela = useTrackToggle({
-        source: Track.Source.ScreenShare,
-        captureOptions: { audio: true, selfBrowserSurface: "exclude" },
-        onDeviceError: () => {},
-    });
+    // mesmo estado da barra da chamada (e a tela usa a qualidade escolhida lá)
+    const { camera, tela } = useControleVoz();
     const agora = useAgora();
 
     const conectado = estado === ConnectionState.Connected;
@@ -32,7 +29,7 @@ export function PainelVoz({ voz, onAbrir, onSair }: Props) {
                     <strong>{status}</strong>
                     <span className="truncar">{voz.canal.nome} · {voz.servidorNome}</span>
                 </button>
-                <span className="painel-voz-tempo">{conectado ? cronometro(agora - voz.desde) : ""}</span>
+                <span className="painel-voz-tempo">{conectado ? cronometro(agora - (voz.inicioSala ? Date.parse(voz.inicioSala) : voz.desde)) : ""}</span>
                 <Dica texto="Desconectar">
                     <button className="botao-icone botao-icone-perigo" onClick={onSair} aria-label="Desconectar">
                         <PhoneOff size={17} />
@@ -42,21 +39,24 @@ export function PainelVoz({ voz, onAbrir, onSair }: Props) {
 
             <div className="painel-voz-acoes">
                 <button
-                    className={`painel-voz-botao ${camera.enabled ? "ligado" : ""}`}
-                    onClick={() => camera.toggle()}
-                    disabled={!conectado || camera.pending}
+                    className={`painel-voz-botao ${camera.ligada ? "ligado" : ""}`}
+                    onClick={camera.alternar}
+                    disabled={!conectado || camera.pendente}
                 >
-                    {camera.enabled ? <Video size={16} /> : <VideoOff size={16} />}
+                    {camera.ligada ? <Video size={16} /> : <VideoOff size={16} />}
                     Câmera
                 </button>
-                <button
-                    className={`painel-voz-botao ${tela.enabled ? "ligado" : ""}`}
-                    onClick={() => tela.toggle()}
-                    disabled={!conectado || tela.pending}
-                >
-                    {tela.enabled ? <MonitorX size={16} /> : <MonitorUp size={16} />}
-                    Tela
-                </button>
+                {/* sem compartilhamento de tela no navegador (celular): a câmera fica com a linha toda */}
+                {tela.suportada && (
+                    <button
+                        className={`painel-voz-botao ${tela.ativa ? "ligado" : ""}`}
+                        onClick={tela.alternar}
+                        disabled={!conectado || tela.pendente}
+                    >
+                        {tela.ativa ? <MonitorX size={16} /> : <MonitorUp size={16} />}
+                        {tela.ativa ? "Parar" : "Tela"}
+                    </button>
+                )}
             </div>
         </div>
     );

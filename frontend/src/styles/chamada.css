@@ -80,9 +80,10 @@
     padding: 16px 16px 92px;
 }
 
+/* flutua dentro do primeiro quadro (o palco tem 16px de respiro em cima) */
 .palco-aviso {
     position: absolute;
-    top: 14px;
+    top: 30px;
     left: 50%;
     translate: -50% 0;
     z-index: 5;
@@ -95,52 +96,81 @@
     border: 1px solid var(--borda-2);
     font-size: 13px;
     color: var(--texto-2);
+    white-space: nowrap;
 }
 
+.palco-sozinho {
+    color: var(--texto-3);
+    animation: aparecer 0.3s ease;
+}
+
+/* grade: o Palco mede a área e calcula a largura de cada quadro; aqui só centraliza
+   (flex-wrap deixa a última linha centralizada, como numa chamada de verdade) */
 .cena-grade {
-    --vao: 10px;
-    display: grid;
-    grid-template-columns: repeat(var(--colunas), minmax(0, 1fr));
-    gap: var(--vao);
-    width: 100%;
-    /* limita a largura pra que todas as linhas caibam na altura disponível */
-    max-width: calc((100dvh - 210px) / var(--linhas) * 16 / 9 * var(--colunas) + (var(--colunas) - 1) * var(--vao));
-    margin: auto;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: center;
+    gap: 10px;
 }
 
-.cena-grade[data-pessoas="1"] {
-    max-width: min(960px, calc((100dvh - 210px) * 16 / 9));
+.cena-grade > .bloco {
+    flex: 0 0 auto;
+    /* antes da primeira medida: um tamanho que cabe em qualquer lugar */
+    width: min(100%, 640px);
 }
 
+/* destaque: um quadro grande e os outros numa faixa ao lado */
 .cena-foco {
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 220px;
+    grid-template-columns: minmax(0, 1fr) 232px;
     gap: 10px;
 }
 
-.cena-foco-principal {
+.cena-foco.sem-faixa {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.foco-principal {
+    position: relative;
+    min-width: 0;
     min-height: 0;
     display: flex;
-    align-items: center;
 }
 
-.cena-foco-principal .bloco {
+.foco-principal > .bloco {
+    flex: 1;
     width: 100%;
-    max-height: 100%;
+    height: 100%;
+    aspect-ratio: auto;
 }
 
-.cena-faixa {
+/* tela cheia: só o destaque, de ponta a ponta */
+.foco-principal:fullscreen {
+    background: #000;
+}
+
+.foco-principal:fullscreen > .bloco {
+    border: none;
+    border-radius: 0;
+}
+
+.foco-faixa {
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
-.cena-faixa .bloco {
+.foco-faixa > .bloco {
     flex-shrink: 0;
+    width: 100%;
 }
 
 /* ---------- bloco ---------- */
@@ -149,10 +179,18 @@
     position: relative;
     container-type: inline-size;
     aspect-ratio: 16 / 9;
-    overflow: hidden;
     border-radius: 12px;
     background: var(--fundo-3);
     border: 1px solid var(--borda);
+    transition: border-color 0.15s;
+}
+
+/* o corte dos cantos fica na mídia; o quadro deixa o painel de volume sair dele */
+.bloco-midia {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: inherit;
 }
 
 /* contorno de quem está falando (por cima do vídeo) */
@@ -160,6 +198,7 @@
     content: "";
     position: absolute;
     inset: 0;
+    z-index: 1;
     border-radius: inherit;
     box-shadow: inset 0 0 0 2px transparent;
     transition: box-shadow 0.15s ease;
@@ -168,6 +207,19 @@
 
 .bloco.falando::after {
     box-shadow: inset 0 0 0 2px var(--texto);
+}
+
+.bloco.clicavel {
+    cursor: pointer;
+}
+
+.bloco.clicavel:hover {
+    border-color: var(--borda-3);
+}
+
+/* com o painel de volume aberto, fica por cima dos vizinhos */
+.bloco:has(.bloco-volume-painel) {
+    z-index: 4;
 }
 
 .bloco video {
@@ -182,8 +234,11 @@
     background: #000;
 }
 
-.bloco-tela video {
+/* tela e qualquer vídeo em destaque aparecem inteiros, sem cortar */
+.bloco-tela video,
+.bloco-destaque video {
     object-fit: contain;
+    background: #000;
 }
 
 .espelhado {
@@ -208,10 +263,10 @@
 }
 
 .bloco-avatar {
-    width: clamp(48px, 22cqi, 112px);
+    width: clamp(40px, 22cqi, 112px);
     height: auto;
     aspect-ratio: 1;
-    font-size: clamp(16px, 7.5cqi, 40px);
+    font-size: clamp(14px, 7.5cqi, 40px);
 }
 
 .bloco-avatar.falando {
@@ -230,6 +285,7 @@
     text-align: center;
     color: var(--texto-3);
     font-size: 13px;
+    background: radial-gradient(ellipse at center, #17171a 0%, var(--fundo-1) 75%);
 }
 
 .bloco-aviso svg {
@@ -242,10 +298,79 @@
     color: var(--texto);
 }
 
+.bloco-miniatura .bloco-aviso {
+    gap: 2px;
+    padding: 8px;
+}
+
+.bloco-miniatura .bloco-aviso strong {
+    font-size: 12.5px;
+}
+
+/* quadro estreito (faixa no celular): o aviso vira só o ícone, sem brigar com o selo e o nome */
+@container (max-width: 200px) {
+    .bloco-aviso strong,
+    .bloco-aviso span {
+        display: none;
+    }
+
+    .bloco-aviso svg {
+        margin: 0;
+    }
+}
+
+.bloco-carregando {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(0, 0, 0, 0.35);
+    color: var(--texto-2);
+}
+
+/* selo de tela compartilhada */
+.bloco-ao-vivo {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 7px 3px 6px;
+    border-radius: 5px;
+    background: var(--texto);
+    color: var(--fundo-0);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    pointer-events: none;
+    transition: opacity 0.25s;
+}
+
+.bloco-ao-vivo::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: piscar 1.6s ease-in-out infinite;
+}
+
+.bloco-miniatura .bloco-ao-vivo {
+    top: 6px;
+    left: 6px;
+    padding: 2px 5px;
+    font-size: 9px;
+}
+
 .bloco-rotulo {
     position: absolute;
     left: 8px;
     bottom: 8px;
+    z-index: 2;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -255,24 +380,173 @@
     background: rgba(0, 0, 0, 0.62);
     font-size: 13px;
     font-weight: 500;
+    transition: opacity 0.25s;
+}
+
+.bloco-miniatura .bloco-rotulo {
+    left: 6px;
+    bottom: 6px;
+    max-width: calc(100% - 12px);
+    padding: 2px 6px;
+    font-size: 12px;
+}
+
+.bloco-rotulo svg {
+    flex-shrink: 0;
 }
 
 .bloco-mudo {
-    flex-shrink: 0;
     color: var(--perigo);
 }
 
 .bloco-sinal {
+    flex-shrink: 0;
+    color: var(--texto-2);
+}
+
+/* barra de ações do quadro (destacar, tela cheia, volume…): aparece no hover */
+.bloco-acoes {
     position: absolute;
     top: 8px;
     right: 8px;
+    z-index: 3;
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 9px;
+    background: rgba(9, 9, 11, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    translate: 0 -4px;
+    transition: opacity 0.15s, translate 0.15s;
+}
+
+.bloco:hover .bloco-acoes,
+.bloco-acoes:focus-within,
+.bloco-acoes:has(.bloco-volume-painel) {
+    opacity: 1;
+    translate: 0 0;
+}
+
+.bloco-acoes:empty {
+    display: none;
+}
+
+/* sem mouse (celular, tablet) não tem hover: a barra fica sempre à mostra */
+@media (hover: none) {
+    .bloco-acoes {
+        opacity: 1;
+        translate: 0 0;
+    }
+}
+
+.bloco-acao {
     display: grid;
     place-items: center;
-    width: 26px;
-    height: 26px;
+    width: 30px;
+    height: 30px;
     border-radius: 6px;
-    background: rgba(0, 0, 0, 0.62);
     color: var(--texto-2);
+    transition: background 0.12s, color 0.12s;
+}
+
+.bloco-acao:hover,
+.bloco-acao.ativo {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--texto);
+}
+
+/* volume só pra você */
+.bloco-volume {
+    position: relative;
+}
+
+.bloco-volume-painel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: -3px;
+    width: 230px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--fundo-3);
+    border: 1px solid var(--borda-2);
+    box-shadow: var(--sombra);
+    cursor: default;
+    animation: surgir 0.14s ease;
+}
+
+.bloco-volume-linha {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.bloco-volume-linha input[type="range"] {
+    flex: 1;
+    min-width: 0;
+    height: 4px;
+    margin: 0;
+    appearance: none;
+    border-radius: 999px;
+    background: linear-gradient(to right, var(--texto) var(--preenchido), var(--fundo-4) var(--preenchido));
+    cursor: pointer;
+}
+
+.bloco-volume-linha input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--texto);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.35);
+}
+
+.bloco-volume-linha input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: none;
+    border-radius: 50%;
+    background: var(--texto);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.35);
+}
+
+.bloco-volume-valor {
+    width: 38px;
+    text-align: right;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--texto-2);
+}
+
+.bloco-volume-silenciar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: -2px -4px -4px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--texto-2);
+}
+
+.bloco-volume-silenciar:hover {
+    background: var(--fundo-4);
+    color: var(--texto);
+}
+
+/* assistindo um destaque sem mexer o mouse: some tudo que está por cima do vídeo */
+.palco-cena.ocioso .bloco-acoes:not(:focus-within):not(:has(.bloco-volume-painel)),
+.palco-cena.ocioso .foco-principal .bloco-rotulo,
+.palco-cena.ocioso .foco-principal .bloco-ao-vivo {
+    opacity: 0;
+}
+
+.palco-cena.ocioso .foco-principal {
+    cursor: none;
 }
 
 /* ---------- controles ---------- */
@@ -291,6 +565,13 @@
     background: var(--fundo-3);
     border: 1px solid var(--borda-2);
     box-shadow: var(--sombra);
+    transition: opacity 0.25s, translate 0.25s;
+}
+
+.palco-cena.ocioso .controles:not(:focus-within):not(:has(.menu)) {
+    opacity: 0;
+    translate: -50% 12px;
+    pointer-events: none;
 }
 
 .controle {
@@ -324,6 +605,30 @@
     color: var(--fundo-0);
 }
 
+/* botão de tela + seta das opções, grudados */
+.controle-grupo {
+    position: relative;
+    display: flex;
+    gap: 1px;
+}
+
+.controle-com-seta {
+    border-radius: 10px 0 0 10px;
+}
+
+.controle-seta {
+    width: 22px;
+    border-radius: 0 10px 10px 0;
+}
+
+.controle-seta svg {
+    transition: rotate 0.15s;
+}
+
+.controle-seta.aberto svg {
+    rotate: 180deg;
+}
+
 .controle-sair {
     width: 56px;
     background: var(--perigo);
@@ -351,6 +656,109 @@
     translate: -50% 0;
     width: 300px;
     padding: 12px;
+}
+
+/* opções do compartilhamento de tela */
+.menu-tela {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.menu-tela > .rotulo {
+    padding: 0 2px;
+}
+
+.opcoes-tela {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: -4px;
+}
+
+.opcao-tela {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    text-align: left;
+    transition: background 0.12s, border-color 0.12s;
+}
+
+.opcao-tela:hover {
+    background: var(--fundo-4);
+}
+
+.opcao-tela.ativa {
+    background: var(--fundo-4);
+    border-color: var(--borda-3);
+}
+
+.opcao-tela-radio {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 2px solid var(--borda-3);
+    transition: border-color 0.12s, background 0.12s;
+}
+
+.opcao-tela.ativa .opcao-tela-radio {
+    border-color: var(--texto);
+    background: var(--texto);
+    box-shadow: inset 0 0 0 3px var(--fundo-4);
+}
+
+.opcao-tela-texto,
+.opcao-audio > span {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.35;
+}
+
+.opcao-tela-texto strong,
+.opcao-audio strong {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--texto);
+}
+
+.opcao-tela-texto span,
+.opcao-audio > span > span {
+    font-size: 12px;
+    color: var(--texto-3);
+}
+
+.opcao-audio {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.opcao-audio:hover {
+    background: var(--fundo-4);
+}
+
+.opcao-audio input {
+    width: 16px;
+    height: 16px;
+    margin: 2px 0 0;
+    flex-shrink: 0;
+    accent-color: var(--texto);
+    cursor: pointer;
+}
+
+.menu-tela-nota {
+    padding: 0 2px;
+    font-size: 12px;
+    color: var(--texto-3);
 }
 
 .ponto-novo {
@@ -538,19 +946,24 @@
         box-shadow: var(--sombra-forte);
     }
 
+    /* a faixa do destaque vai pra baixo, na horizontal */
     .cena-foco {
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: minmax(0, 1fr) auto;
     }
 
-    .cena-faixa {
+    .cena-foco.sem-faixa {
+        grid-template-rows: minmax(0, 1fr);
+    }
+
+    .foco-faixa {
         flex-direction: row;
         overflow-x: auto;
         overflow-y: hidden;
     }
 
-    .cena-faixa .bloco {
-        width: 170px;
+    .foco-faixa > .bloco {
+        width: 168px;
     }
 }
 
@@ -574,7 +987,26 @@
         width: 48px;
     }
 
+    .controle-seta {
+        width: 20px;
+    }
+
+    .foco-faixa > .bloco {
+        width: 140px;
+    }
+
     .controles-divisor {
         display: none;
+    }
+
+    /* os menus (dispositivos, opções da tela) centralizam na barra inteira, não no botão:
+       centrado no botão da direita, o de dispositivos saía da tela */
+    .controle-grupo,
+    .controles-config {
+        position: static;
+    }
+
+    .menu-cima {
+        width: min(300px, calc(100vw - 24px));
     }
 }

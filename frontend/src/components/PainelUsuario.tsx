@@ -1,18 +1,25 @@
-import { Headphones, HeadphoneOff, LogOut, Mic, MicOff } from "lucide-react";
+import { Camera, Headphones, HeadphoneOff, LogOut, Mic, MicOff } from "lucide-react";
 import type { Usuario } from "../api";
 import { useControleVoz } from "../contexto/ControleVoz";
 import { Avatar } from "./ui/Avatar";
 import { Dica } from "./ui/Dica";
 
-type Props = { eu: Usuario; salaAtual: string | null; onSair: () => void };
+type Props = { eu: Usuario; salaAtual: string | null; onEditarFoto: () => void; onSair: () => void };
 
-// rodapé da lista de canais: você, microfone, áudio e sair da conta
-export function PainelUsuario({ eu, salaAtual, onSair }: Props) {
+// rodapé da lista de canais: você (clique na foto pra trocar), microfone, áudio e sair da conta
+export function PainelUsuario({ eu, salaAtual, onEditarFoto, onSair }: Props) {
     const { micLigado, micPendente, alternarMic, surdo, alternarSurdo } = useControleVoz();
 
     return (
         <div className="painel-usuario">
-            <Avatar nome={eu.nome} url={eu.avatarUrl} tamanho={32} />
+            <Dica texto="Alterar foto de perfil">
+                <button className="painel-usuario-foto" onClick={onEditarFoto} aria-label="Alterar foto de perfil">
+                    <Avatar nome={eu.nome} url={eu.avatarUrl} tamanho={32} />
+                    <span className="painel-usuario-foto-camada" aria-hidden>
+                        <Camera size={14} />
+                    </span>
+                </button>
+            </Dica>
             <div className="painel-usuario-texto">
                 <strong className="truncar">{eu.nome}</strong>
                 {salaAtual && <span className="truncar">Em {salaAtual}</span>}

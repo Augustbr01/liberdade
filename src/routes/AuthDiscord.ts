@@ -1,6 +1,7 @@
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import type { DiscordUser } from "../interface/InterfacePayloadDiscord";
 import {prisma} from "../../lib/prisma"
+import { devolverAvatarUrl } from "../config/DevolverFotoUrl";
 export const AuthDiscord: (FastifyPluginAsyncTypebox) = async (fastify) => {
 
     const {MODO} = process.env;
@@ -45,9 +46,4 @@ export const AuthDiscord: (FastifyPluginAsyncTypebox) = async (fastify) => {
             maxAge: 60 * 60 * 24 * 7
         }).redirect("/");
     })
-}
-
-function devolverAvatarUrl() {
-    const indice = Math.floor((Math.random() * 6));
-    return `https://cdn.discordapp.com/embed/avatars/${indice}.png`;
 }

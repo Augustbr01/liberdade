@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { SendHorizontal, X } from "lucide-react";
 import type { Usuario } from "../../api";
 import { useChatSala, type MensagemSala } from "../../contexto/ChatSala";
-import { hora } from "../../lib/util";
+import { hora, telaDeToque } from "../../lib/util";
 import type { MapaMembros } from "../../tipos";
 import { Avatar } from "../ui/Avatar";
 
@@ -32,12 +32,14 @@ type Props = { membros: MapaMembros; eu: Usuario; onFechar: () => void };
 export function ChatAoVivo({ membros, eu, onFechar }: Props) {
     const { mensagens, enviar, enviando, marcarLidas } = useChatSala();
     const [texto, setTexto] = useState("");
-    const fimRef = useRef<HTMLDivElement>(null);
+    const listaRef = useRef<HTMLDivElement>(null);
 
-    // painel aberto = tudo lido; e desce até a última mensagem
+    // painel aberto = tudo lido; e desce até a última mensagem. Rola só a lista:
+    // o scrollIntoView rolava a página junto no celular com o teclado aberto
     useEffect(() => {
         marcarLidas();
-        fimRef.current?.scrollIntoView({ block: "end" });
+        const lista = listaRef.current;
+        if (lista) lista.scrollTop = lista.scrollHeight;
     }, [mensagens.length, marcarLidas]);
 
     async function submeter(e: FormEvent) {
@@ -65,7 +67,7 @@ export function ChatAoVivo({ membros, eu, onFechar }: Props) {
                 </button>
             </header>
 
-            <div className="chat-sala-lista">
+            <div className="chat-sala-lista" ref={listaRef}>
                 {mensagens.length === 0 && <p className="chat-sala-vazio">Nenhuma mensagem ainda.</p>}
 
                 {agrupar(mensagens).map((g) => {
@@ -87,7 +89,6 @@ export function ChatAoVivo({ membros, eu, onFechar }: Props) {
                         </div>
                     );
                 })}
-                <div ref={fimRef} />
             </div>
 
             <form className="chat-sala-compor" onSubmit={submeter}>
@@ -96,9 +97,17 @@ export function ChatAoVivo({ membros, eu, onFechar }: Props) {
                     onChange={(e) => setTexto(e.target.value)}
                     placeholder="Mensagem para a sala"
                     maxLength={500}
-                    autoFocus
+                    // no celular, abrir o chat não abre o teclado sozinho (dá pra só ler)
+                    autoFocus={!telaDeToque}
+                    enterKeyHint="send"
                 />
-                <button className="botao-icone" disabled={!texto.trim() || enviando} aria-label="Enviar">
+                {/* não tira o foco do campo: no celular o teclado fecharia a cada envio */}
+                <button
+                    className="botao-icone"
+                    disabled={!texto.trim() || enviando}
+                    aria-label="Enviar"
+                    onMouseDown={(e) => e.preventDefault()}
+                >
                     <SendHorizontal size={18} />
                 </button>
             </form>

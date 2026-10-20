@@ -6,6 +6,9 @@
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     height: 100dvh;
+    /* viewport-fit=cover: no iPhone a página vai até baixo do notch e da barra de início;
+       isso tira o conteúdo de baixo deles (no computador é tudo 0) */
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     background: var(--fundo-2);
     /* evita o aviso do LiveKit pedindo o CSS padrão dele (usamos o nosso) */
     --lk-has-imported-styles: 1;
@@ -153,6 +156,25 @@
     box-shadow: 0 0 0 3px var(--fundo-0);
 }
 
+/* badge de mensagens não lidas no ícone do servidor */
+.barra-badge {
+    position: absolute;
+    top: -2px;
+    right: 11px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: var(--perigo);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 0 0 3px var(--fundo-0);
+}
+
 .icone-adicionar {
     width: 40px;
     height: 40px;
@@ -279,6 +301,19 @@
     opacity: 1;
 }
 
+/* o nome do canal acaba antes da engrenagem, em vez de passar por baixo dela */
+.canal-linha:has(.canal-acoes) .canal {
+    padding-right: 32px;
+}
+
+/* sem mouse (celular) não tem hover: a engrenagem ficava invisível, mas continuava ali,
+   e tocar no fim da linha abria o menu em vez do canal */
+@media (hover: none) {
+    .canal-acoes {
+        opacity: 1;
+    }
+}
+
 .canal-acao {
     color: var(--texto-3);
 }
@@ -326,6 +361,21 @@
     color: var(--texto);
 }
 
+/* há quanto tempo a chamada da sala está rolando, no fim da linha */
+.canal-tempo {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--texto-4);
+    font-variant-numeric: tabular-nums;
+}
+
+.canal.ativo .canal-tempo,
+.canal.conectado .canal-tempo {
+    color: var(--texto-3);
+}
+
 .canal-carregando {
     margin-left: auto;
     flex-shrink: 0;
@@ -359,11 +409,49 @@
     color: var(--texto);
 }
 
+/* foto + nome de quem está na sala: abre o perfil */
+.voz-pessoa-quem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    text-align: left;
+}
+
+/* ícones e "ao vivo" nunca encolhem: quem encolhe (com reticências) é o nome */
 .voz-pessoa-estado {
     display: flex;
+    flex-shrink: 0;
+    align-items: center;
     gap: 4px;
     margin-left: auto;
     color: var(--texto-3);
+}
+
+.voz-pessoa-estado svg {
+    flex-shrink: 0;
+}
+
+/* quem está compartilhando a tela: clicar abre a chamada assistindo */
+.voz-ao-vivo {
+    flex-shrink: 0;
+    height: 18px;
+    white-space: nowrap;
+    padding: 0 6px;
+    border-radius: 4px;
+    background: var(--texto);
+    color: var(--fundo-0);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: background 0.12s;
+}
+
+.voz-ao-vivo:hover {
+    background: #d4d4d8;
 }
 
 .esqueleto-canais {
@@ -426,9 +514,11 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* um botão por coluna, todos do mesmo tamanho (sem o de tela, a câmera ocupa a linha) */
 .painel-voz-acoes {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     gap: 6px;
     margin: 10px 4px 0 0;
 }
@@ -474,8 +564,29 @@
     border-top: 1px solid var(--borda);
 }
 
-.painel-usuario > .avatar {
+.painel-usuario-foto {
+    position: relative;
+    display: grid;
     margin-right: 8px;
+    border-radius: 50%;
+}
+
+/* câmera por cima da foto ao passar o mouse: mostra que dá pra trocar */
+.painel-usuario-foto-camada {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    color: var(--texto);
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.painel-usuario-foto:hover .painel-usuario-foto-camada,
+.painel-usuario-foto:focus-visible .painel-usuario-foto-camada {
+    opacity: 1;
 }
 
 .painel-usuario-texto {
@@ -556,21 +667,52 @@
     border-left: 1px solid var(--borda);
 }
 
-.membros-grupo + .membros-grupo {
-    margin-top: 18px;
+/* título e botão de fechar: só quando a lista abre por cima do chat (tela estreita) */
+.lista-membros-topo {
+    display: none;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    align-items: center;
+    gap: 8px;
+    height: 52px;
+    margin: 0 -8px 8px;
+    padding: 0 8px 0 16px;
+    background: var(--fundo-1);
+    border-bottom: 1px solid var(--borda);
 }
 
-.membros-grupo > .rotulo {
+.lista-membros-topo strong {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.lista-membros-total {
+    margin-right: auto;
+    font-size: 13px;
+    color: var(--texto-3);
+    font-variant-numeric: tabular-nums;
+}
+
+.membros-titulo {
     display: block;
     padding: 4px 8px 6px;
 }
 
+/* o título do segundo grupo (membros) se afasta do fim do primeiro */
+.membro + .membros-titulo {
+    margin-top: 18px;
+}
+
+/* a linha inteira é um botão: abre o perfil */
 .membro {
     display: flex;
     align-items: center;
     gap: 10px;
+    width: 100%;
     padding: 6px 8px;
     border-radius: 6px;
+    text-align: left;
 }
 
 .membro:hover {
@@ -616,14 +758,23 @@
 /* ---------- telas menores ---------- */
 
 @media (max-width: 1100px) {
+    /* a lista vira uma gaveta que entra pela direita, por cima do chat */
     .lista-membros {
         position: fixed;
         top: 0;
         right: 0;
         bottom: 0;
         z-index: 56;
+        width: min(280px, calc(100vw - 56px));
+        padding-top: 0;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom));
+        overscroll-behavior: contain;
         box-shadow: var(--sombra-forte);
-        animation: aparecer 0.15s ease;
+        animation: entrar-da-direita 0.22s ease;
+    }
+
+    .lista-membros-topo {
+        display: flex;
     }
 
     .fundo-escuro.so-sobreposto {
@@ -632,6 +783,13 @@
         inset: 0;
         z-index: 55;
         background: rgba(0, 0, 0, 0.5);
+        animation: aparecer 0.22s ease;
+    }
+}
+
+@keyframes entrar-da-direita {
+    from {
+        transform: translateX(100%);
     }
 }
 

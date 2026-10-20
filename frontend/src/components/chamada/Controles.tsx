@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { useTrackToggle } from "@livekit/components-react";
-import { Track } from "livekit-client";
 import {
-    Headphones, HeadphoneOff, Mic, MicOff, MonitorUp, MonitorX, PhoneOff, Settings2, Video, VideoOff,
+    ChevronUp, Headphones, HeadphoneOff, Loader2, Mic, MicOff, MonitorUp, MonitorX, PhoneOff, RefreshCw, Settings2, Video,
+    VideoOff,
 } from "lucide-react";
-import { useControleVoz } from "../../contexto/ControleVoz";
-import { useToast } from "../../contexto/Toasts";
+import { QUALIDADES_TELA, useControleVoz, type QualidadeTela } from "../../contexto/ControleVoz";
 import { useCliqueFora } from "../../hooks/useCliqueFora";
 import { estaDigitando } from "../../lib/util";
 import { Dica } from "../ui/Dica";
@@ -13,21 +11,7 @@ import { Dispositivos } from "./Dispositivos";
 
 // barra de controles da chamada
 export function Controles({ onSair }: { onSair: () => void }) {
-    const toast = useToast();
-    const { micLigado, micPendente, alternarMic, surdo, alternarSurdo } = useControleVoz();
-
-    const aoFalharCamera = useCallback(() => toast.erro("Não consegui acessar a câmera. Confira as permissões do navegador."), [toast]);
-    const camera = useTrackToggle({ source: Track.Source.Camera, onDeviceError: aoFalharCamera });
-    const tela = useTrackToggle({
-        source: Track.Source.ScreenShare,
-        captureOptions: { audio: true, selfBrowserSurface: "exclude" },
-        onDeviceError: () => {},
-    });
-
-    const [configAberta, setConfigAberta] = useState(false);
-    const configRef = useRef<HTMLDivElement>(null);
-    const fecharConfig = useCallback(() => setConfigAberta(false), []);
-    useCliqueFora(configRef, configAberta, fecharConfig);
+    const { conectado, micLigado, micPendente, alternarMic, surdo, alternarSurdo, camera, tela } = useControleVoz();
 
     // atalho: M liga/desliga o microfone
     useEffect(() => {
@@ -55,33 +39,21 @@ export function Controles({ onSair }: { onSair: () => void }) {
             </Controle>
 
             <Controle
-                dica={camera.enabled ? "Desligar câmera" : "Ligar câmera"}
-                ligado={camera.enabled}
-                pendente={camera.pending}
-                onClick={() => camera.toggle()}
+                dica={camera.ligada ? "Desligar câmera" : "Ligar câmera"}
+                ligado={camera.ligada}
+                pendente={camera.pendente || !conectado}
+                onClick={camera.alternar}
             >
-                {camera.enabled ? <Video size={20} /> : <VideoOff size={20} />}
+                {camera.ligada ? <Video size={20} /> : <VideoOff size={20} />}
             </Controle>
 
-            <Controle
-                dica={tela.enabled ? "Parar de compartilhar" : "Compartilhar tela"}
-                ligado={tela.enabled}
-                pendente={tela.pending}
-                onClick={() => tela.toggle()}
-            >
-                {tela.enabled ? <MonitorX size={20} /> : <MonitorUp size={20} />}
-            </Controle>
+            {/* celular não compartilha tela: o botão ficava desabilitado sem explicação
+                (a dica que explicava não aparece no toque) */}
+            {tela.suportada && <ControleTela />}
 
-            <div className="controles-config" ref={configRef}>
-                <Controle dica="Dispositivos" ligado={configAberta} onClick={() => setConfigAberta((v) => !v)}>
-                    <Settings2 size={20} />
-                </Controle>
-                {configAberta && (
-                    <div className="menu menu-cima">
-                        <Dispositivos />
-                    </div>
-                )}
-            </div>
+            <MenuNoControle dica="Dispositivos" icone={<Settings2 size={20} />}>
+                <Dispositivos />
+            </MenuNoControle>
 
             <span className="controles-divisor" />
 
@@ -90,6 +62,127 @@ export function Controles({ onSair }: { onSair: () => void }) {
                     <PhoneOff size={20} />
                 </button>
             </Dica>
+        </div>
+    );
+}
+
+// compartilhar tela: o botão começa/para; a seta ao lado abre qualidade e áudio
+function ControleTela() {
+    const { conectado, tela } = useControleVoz();
+    const [aberto, setAberto] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+    const fechar = useCallback(() => setAberto(false), []);
+    useCliqueFora(ref, aberto, fechar);
+
+    // só aparece quando o navegador compartilha tela (ver Controles)
+    const dica = tela.ativa ? "Parar de compartilhar" : "Compartilhar tela";
+    const desativado = !conectado || tela.pendente;
+
+    return (
+        <div className="controle-grupo" ref={ref}>
+            <Dica texto={dica}>
+                <button
+                    className={`controle controle-com-seta ${tela.ativa ? "controle-ligado" : ""}`}
+                    onClick={tela.alternar}
+                    disabled={desativado}
+                    aria-label={dica}
+                    aria-pressed={tela.ativa}
+                >
+                    {tela.pendente ? <Loader2 size={20} className="girar" /> : tela.ativa ? <MonitorX size={20} /> : <MonitorUp size={20} />}
+                </button>
+            </Dica>
+            <Dica texto="Opções de compartilhamento">
+                <button
+                    className={`controle controle-seta ${tela.ativa ? "controle-ligado" : ""} ${aberto ? "aberto" : ""}`}
+                    onClick={() => setAberto((v) => !v)}
+                    aria-label="Opções de compartilhamento"
+                    aria-expanded={aberto}
+                >
+                    <ChevronUp size={14} />
+                </button>
+            </Dica>
+
+            {aberto && (
+                <div className="menu menu-cima menu-tela" role="dialog" aria-label="Opções de compartilhamento">
+                    <span className="rotulo">Qualidade</span>
+                    <div className="opcoes-tela" role="radiogroup" aria-label="Qualidade">
+                        {(Object.keys(QUALIDADES_TELA) as QualidadeTela[]).map((id) => {
+                            const perfil = QUALIDADES_TELA[id];
+                            const ativa = tela.qualidade === id;
+                            return (
+                                <button
+                                    key={id}
+                                    role="radio"
+                                    aria-checked={ativa}
+                                    className={`opcao-tela ${ativa ? "ativa" : ""}`}
+                                    onClick={() => tela.definirQualidade(id)}
+                                >
+                                    <span className="opcao-tela-radio" />
+                                    <span className="opcao-tela-texto">
+                                        <strong>{perfil.titulo}</strong>
+                                        <span>{perfil.detalhe}</span>
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <label className="opcao-audio">
+                        <input type="checkbox" checked={tela.comAudio} onChange={(e) => tela.definirAudio(e.target.checked)} />
+                        <span>
+                            <strong>Compartilhar o áudio</strong>
+                            <span>Som da aba ou do sistema, quando o navegador deixar</span>
+                        </span>
+                    </label>
+
+                    {tela.ativa ? (
+                        <>
+                            <p className="menu-tela-nota">As mudanças valem a partir do próximo compartilhamento.</p>
+                            <button
+                                className="botao botao-pequeno botao-largo botao-contorno"
+                                onClick={() => {
+                                    fechar();
+                                    tela.trocar();
+                                }}
+                            >
+                                <RefreshCw size={14} />
+                                Trocar o que estou mostrando
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            className="botao botao-pequeno botao-largo botao-primario"
+                            disabled={!conectado || tela.pendente}
+                            onClick={() => {
+                                fechar();
+                                tela.alternar();
+                            }}
+                        >
+                            <MonitorUp size={14} />
+                            Compartilhar agora
+                        </button>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+type MenuProps = { dica: string; icone: ReactNode; children: ReactNode };
+
+// controle que abre um menu pra cima (dispositivos)
+function MenuNoControle({ dica, icone, children }: MenuProps) {
+    const [aberto, setAberto] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+    const fechar = useCallback(() => setAberto(false), []);
+    useCliqueFora(ref, aberto, fechar);
+
+    return (
+        <div className="controles-config" ref={ref}>
+            <Controle dica={dica} ligado={aberto} onClick={() => setAberto((v) => !v)}>
+                {icone}
+            </Controle>
+            {aberto && <div className="menu menu-cima">{children}</div>}
         </div>
     );
 }

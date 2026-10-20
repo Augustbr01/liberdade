@@ -51,6 +51,28 @@
     color: var(--texto-3);
 }
 
+/* aviso de convite esperando o login */
+.login-convite {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin: -4px 0 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--fundo-3);
+    border: 1px solid var(--borda-3);
+    color: var(--texto-2);
+    font-size: 13.5px;
+    line-height: 1.4;
+    text-align: left;
+}
+
+.login-convite svg {
+    flex-shrink: 0;
+    color: var(--texto);
+}
+
 .login-cartao small {
     margin-top: 6px;
     font-size: 12.5px;
@@ -149,6 +171,18 @@
     justify-content: flex-end;
     gap: 8px;
     margin-top: 4px;
+}
+
+/* celular: os botões ocupam a largura (mais fáceis de tocar) e quebram a linha quando
+   não cabem (Remover foto + Cancelar + Salvar foto estouravam o diálogo) */
+@media (max-width: 480px) {
+    .formulario-acoes {
+        flex-wrap: wrap;
+    }
+
+    .formulario-acoes .botao {
+        flex: 1 1 auto;
+    }
 }
 
 .abas {
@@ -278,6 +312,451 @@
     border-color: var(--texto);
     background: var(--texto);
     box-shadow: inset 0 0 0 3px var(--fundo-4);
+}
+
+/* ---------- foto de perfil ---------- */
+
+.foto-perfil {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 16px 18px;
+    border-radius: 10px;
+    border: 1px dashed var(--borda-3);
+    background: var(--fundo-1);
+    text-align: center;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+/* arrastando um arquivo por cima */
+.foto-perfil.arrastando {
+    border-color: var(--texto-3);
+    background: var(--fundo-3);
+}
+
+.foto-perfil-alvo {
+    position: relative;
+    display: grid;
+    border-radius: 50%;
+}
+
+.foto-perfil-camada {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--texto);
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.foto-perfil-alvo:hover:not(:disabled) .foto-perfil-camada,
+.foto-perfil-alvo:focus-visible .foto-perfil-camada,
+.foto-perfil.arrastando .foto-perfil-camada {
+    opacity: 1;
+}
+
+.foto-perfil-dica {
+    max-width: 260px;
+    font-size: 12.5px;
+    color: var(--texto-3);
+}
+
+.botao-contorno {
+    border: 1px solid var(--borda-3);
+    color: var(--texto-2);
+}
+
+.botao-contorno:hover:not(:disabled) {
+    background: var(--hover);
+    color: var(--texto);
+}
+
+/* fica à esquerda, longe do "Salvar" */
+.botao-remover {
+    margin-right: auto;
+    padding: 0 12px;
+    color: var(--perigo);
+}
+
+.botao-remover:hover:not(:disabled) {
+    background: var(--perigo-suave);
+}
+
+/* ---------- perfil (cartão que abre ao clicar em alguém) ---------- */
+
+.perfil {
+    position: fixed;
+    z-index: 90;
+    width: 300px;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--fundo-2);
+    border: 1px solid var(--borda-2);
+    box-shadow: var(--sombra-forte);
+    animation: surgir 0.14s ease;
+}
+
+/* celular: preso embaixo, na largura da tela (sem cobrir a lista de onde abriu) */
+.perfil-folha {
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    width: auto;
+    max-width: 440px;
+    margin: 0 auto;
+    animation: subir 0.2s ease;
+}
+
+@keyframes subir {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+}
+
+.perfil-capa {
+    position: relative;
+    height: 96px;
+    overflow: hidden;
+    background: var(--fundo-4);
+}
+
+/* a foto desfocada vira a capa */
+.perfil-capa-imagem {
+    position: absolute;
+    inset: -30%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(28px) saturate(1.15);
+    opacity: 0.6;
+}
+
+.perfil-avatar {
+    position: relative;
+    width: fit-content;
+    margin: -46px 0 0 16px;
+}
+
+/* aro da cor do cartão: o avatar parece recortado da capa */
+.perfil-avatar .avatar {
+    box-shadow: 0 0 0 6px var(--fundo-2);
+}
+
+.perfil-corpo {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 12px 16px 16px;
+}
+
+.perfil-nome {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.perfil-nome strong {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.perfil-tag {
+    flex-shrink: 0;
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: var(--fundo-4);
+    border: 1px solid var(--borda-3);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--texto-2);
+}
+
+.perfil-secao {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--fundo-1);
+    border: 1px solid var(--borda);
+}
+
+.perfil-data {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--texto);
+}
+
+.perfil-data svg {
+    flex-shrink: 0;
+    color: var(--texto-3);
+}
+
+.perfil-aviso {
+    font-size: 12.5px;
+    color: var(--texto-3);
+}
+
+/* ---------- expulsar membro ---------- */
+
+.expulsar-quem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--fundo-1);
+    border: 1px solid var(--borda-2);
+}
+
+.expulsar-quem div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.35;
+}
+
+.expulsar-quem strong {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.expulsar-quem span {
+    font-size: 13px;
+    color: var(--texto-3);
+}
+
+/* expulsar e banir lado a lado, no fim do cartão de perfil */
+.perfil-moderacao {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+/* dar ou tirar admin: a linha toda, acima de expulsar e banir */
+.perfil-moderacao-cargo {
+    grid-column: 1 / -1;
+}
+
+/* ---------- configurações do servidor: ícone ---------- */
+
+.icone-editavel {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px dashed var(--borda-3);
+}
+
+/* o ícone em si é o botão: câmera por cima no hover, spinner enquanto sobe */
+.icone-editavel-alvo {
+    position: relative;
+    display: grid;
+    flex-shrink: 0;
+    border-radius: 19px;
+}
+
+.icone-editavel-camada {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    border-radius: inherit;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--texto);
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.icone-editavel-alvo:hover:not(:disabled) .icone-editavel-camada,
+.icone-editavel-alvo:focus-visible .icone-editavel-camada,
+.icone-editavel.enviando .icone-editavel-camada {
+    opacity: 1;
+}
+
+.icone-editavel-texto {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+}
+
+.icone-editavel-texto strong {
+    max-width: 100%;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.icone-editavel-dica {
+    font-size: 12.5px;
+    color: var(--texto-3);
+}
+
+/* ---------- configurações do servidor: apagar (só o dono) ---------- */
+
+.zona-perigo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 20px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(229, 72, 77, 0.35);
+}
+
+.zona-perigo > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.zona-perigo strong {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.zona-perigo span {
+    font-size: 12.5px;
+    color: var(--texto-3);
+}
+
+/* celular: o botão desce e ocupa a largura */
+@media (max-width: 480px) {
+    .zona-perigo {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* "Pra confirmar, digite <nome>": o nome em destaque e fácil de selecionar e copiar */
+.confirmar-nome {
+    font-size: 13.5px;
+    color: var(--texto-2);
+}
+
+.confirmar-nome strong {
+    color: var(--texto);
+    user-select: all;
+}
+
+/* ---------- configurações do servidor: banimentos ---------- */
+
+.banidos-total {
+    display: block;
+    margin-bottom: 8px;
+}
+
+/* a lista rola sozinha: as abas continuam à vista com muita gente banida */
+.banidos {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: min(420px, 55dvh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.banidos-esqueleto {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.banido {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--fundo-1);
+    border: 1px solid var(--borda-2);
+}
+
+.banido-texto {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+    line-height: 1.3;
+}
+
+.banido-texto strong {
+    font-size: 14.5px;
+    font-weight: 600;
+}
+
+.banido-data {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--texto-3);
+}
+
+.banido-data svg {
+    flex-shrink: 0;
+}
+
+.banido-esqueleto-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.banidos-vazio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 28px 16px;
+    text-align: center;
+    font-size: 13.5px;
+    color: var(--texto-3);
+}
+
+.banidos-vazio strong {
+    font-size: 15px;
+    color: var(--texto);
+}
+
+.banidos-vazio .botao {
+    margin-top: 8px;
+}
+
+.banidos-vazio-icone {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 4px;
+    border-radius: 50%;
+    background: var(--fundo-4);
+    color: var(--texto-2);
+}
+
+/* celular: o botão desce pra linha de baixo, na largura toda, e o nome e a data ficam inteiros */
+@media (max-width: 480px) {
+    .banido {
+        flex-wrap: wrap;
+    }
+
+    .banido > .botao {
+        flex-basis: 100%;
+    }
 }
 
 /* ---------- busca rápida ---------- */

@@ -18,7 +18,7 @@ export const LiveKit: (FastifyPluginAsyncTypebox) = async (fastify) => {
         throw new Error("LIVEKIT.TS SEM .ENV");
     }
 
-fastify.get("/livekit/token", { schema: { querystring: Type.Object({ salaId: Type.String({})}) } }, async (req, rep) => {
+fastify.get("/livekit/token", {config: {rateLimit: false} ,schema: { querystring: Type.Object({ salaId: Type.String({})}) } }, async (req, rep) => {
     const { salaId} = req.query;
     const idUsuario = req.user.id;
 

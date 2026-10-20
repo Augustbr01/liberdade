@@ -1,9 +1,11 @@
 import { Loader2, Volume2 } from "lucide-react";
 import type { Canal, Usuario } from "../../api";
 import type { MapaMembros, Voz } from "../../tipos";
+import { chaveTela, useFocoChamada } from "../../contexto/FocoChamada";
 import { Avatar } from "../ui/Avatar";
 import { Cabecalho } from "../ui/Cabecalho";
 import { Palco } from "./Palco";
+import { TempoSala } from "./TempoSala";
 
 type Props = {
     canal: Canal;
@@ -19,13 +21,21 @@ type Props = {
 
 // tela de uma sala de voz: a chamada, se você estiver nela; senão, quem está lá e o botão de entrar
 export function VistaVoz({ canal, eu, membros, voz, pessoas, entrando, onEntrar, onSair, onMenu }: Props) {
+    const { focarAoEntrar } = useFocoChamada();
+
     if (voz?.canal.id === canal.id) {
         return <Palco voz={voz} eu={eu} membros={membros} onSair={onSair} onMenu={onMenu} />;
     }
 
     return (
         <div className="vista">
-            <Cabecalho icone={<Volume2 size={20} />} titulo={canal.nome} onMenu={onMenu} />
+            <Cabecalho
+                icone={<Volume2 size={20} />}
+                titulo={canal.nome}
+                // a chamada da sala, pra quem está olhando de fora
+                descricao={canal.inicioCall && pessoas.length > 0 ? <TempoSala inicio={canal.inicioCall} /> : undefined}
+                onMenu={onMenu}
+            />
 
             <div className="voz-fora">
                 <div className="voz-fora-conteudo">
@@ -40,6 +50,19 @@ export function VistaVoz({ canal, eu, membros, voz, pessoas, entrando, onEntrar,
                                     <li key={p.id}>
                                         <Avatar nome={p.nome} url={p.avatarUrl} tamanho={24} />
                                         <span className="truncar">{p.nome}</span>
+                                        {canal.telas?.includes(p.id) && (
+                                            <button
+                                                className="voz-ao-vivo"
+                                                onClick={() => {
+                                                    focarAoEntrar(chaveTela(p.id));
+                                                    onEntrar();
+                                                }}
+                                                disabled={entrando}
+                                                title={`Entrar e assistir a tela de ${p.nome}`}
+                                            >
+                                                Ao vivo
+                                            </button>
+                                        )}
                                     </li>
                                 ))}
                             </ul>

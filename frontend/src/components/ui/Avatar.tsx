@@ -34,12 +34,16 @@ export function Avatar({ nome, url, tamanho = 32, falando, className = "" }: Ava
 type IconeServidorProps = { nome: string; url?: string | null; tamanho?: number };
 
 export function IconeServidor({ nome, url, tamanho = 40 }: IconeServidorProps) {
+    // a imagem não carregou (apagada, link quebrado): volta pras iniciais, igual no Avatar
+    const [falhou, setFalhou] = useState(false);
+    useEffect(() => setFalhou(false), [url]);
+
     return (
         <span
             className="icone-servidor"
             style={{ width: tamanho, height: tamanho, fontSize: Math.round(tamanho * 0.34), borderRadius: Math.round(tamanho * 0.3) }}
         >
-            {url ? <img src={url} alt="" draggable={false} /> : iniciais(nome)}
+            {url && !falhou ? <img src={url} alt="" draggable={false} onError={() => setFalhou(true)} /> : iniciais(nome)}
         </span>
     );
 }

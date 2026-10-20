@@ -1,7 +1,7 @@
 // Conexão WebSocket única com o /api/gateway. Os hooks se inscrevem aqui em vez
 // de ficar perguntando ao servidor (polling). É um singleton de módulo: existe
 // uma conexão por aba, compartilhada por todo mundo que chama `assinar`.
-import type { EventoGateway } from "../tipos";
+import type { EventoGateway, MensagemCliente } from "../tipos";
 
 type Ouvinte = (evento: EventoGateway) => void;
 
@@ -68,6 +68,10 @@ export const gateway = {
         window.clearTimeout(reconexao);
         ws?.close();
         ws = null;
+    },
+    // manda uma mensagem pro servidor (só se o socket estiver aberto)
+    enviar(dados: MensagemCliente) {
+        if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(dados));
     },
     // ouvir todos os eventos; devolve a função que cancela a inscrição
     assinar(o: Ouvinte) {
