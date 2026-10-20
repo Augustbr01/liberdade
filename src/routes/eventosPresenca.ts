@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import { Status } from "../interface/Evento";
 import { publicarParaUsuarios } from "./eventosConexao";
+import {WebSocket} from "ws"
 
 const servidoresDoUsuario = new Map<string,Set<string>>();
 const membrosServidores = new Map<string,Set<string>>();

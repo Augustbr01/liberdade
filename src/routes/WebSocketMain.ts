@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { conectar, marcarVivo, publicarParaServidor} from "./eventosConexao";
+import { conectar, enviarSnapshot, marcarVivo, publicarParaServidor} from "./eventosConexao";
 import { buscarServidor } from "../config/CacheTyping";
 export const routeWebSocket : (FastifyPluginAsync) = async (fastify) => {
 
@@ -21,6 +21,12 @@ export const routeWebSocket : (FastifyPluginAsync) = async (fastify) => {
         socket.on("pong", () => {
             marcarVivo(socket);
         })
+
+        try {
+            await enviarSnapshot(req.user.id,socket);
+        }catch(e) {
+            console.log("erro grave");
+        }
 
         socket.on("message", async (raw) => {
             try {

@@ -1,18 +1,40 @@
 import {WebSocket} from "ws"
 import {Status, type Evento} from "../interface/Evento"
 import { prisma } from "../../lib/prisma";
+import { avisarPresenca, buscarMembrosServidor, buscarServidoresUsuario } from "./eventosPresenca";
 const conexoes = new Map<string,Set<WebSocket>>();
 const vivos = new WeakMap<WebSocket,boolean>();
+const online = new Set<string>();
+const timersOffline = new Map<string, NodeJS.Timeout>();
 export function conectar(usuarioId: string, ws:WebSocket) {
     const set = conexoes.get(usuarioId) ?? new Set<WebSocket>();
 
     set.add(ws);
-
     conexoes.set(usuarioId,set);
+
+    const timer = timersOffline.get(usuarioId);
+
+    if(timer) {
+        clearTimeout(timer);
+        timersOffline.delete(usuarioId);
+    }
 
     return () => {
         set.delete(ws);
-        if(set.size === 0 && conexoes.get(usuarioId) === set) conexoes.delete(usuarioId);
+        if(set.size === 0 && conexoes.get(usuarioId) === set) {
+            conexoes.delete(usuarioId);
+            const antigo = timersOffline.get(usuarioId);
+
+            if(antigo) {
+                clearTimeout(antigo);
+            }
+            timersOffline.set(usuarioId, setTimeout(() => {
+                timersOffline.delete(usuarioId);
+                if(conexoes.has(usuarioId)) return;
+                online.delete(usuarioId);
+                avisarPresenca(usuarioId,Status.OFFLINE);
+            },5000))
+        }
     }
 }
 
@@ -45,15 +67,25 @@ export function marcarVivo(ws : WebSocket) {
     vivos.set(ws,true);
 }
 
-async function avisarPresenca(usuarioId : string,status : Status) {
-    try {
-        const entidades = await prisma.usuarioServidor.findMany({where: {servidor: {membros: {some: {usuarioId:usuarioId}}}},select:{usuarioId:true}});
+export async function enviarSnapshot(usuarioId: string,ws: WebSocket) {
+    const servidores = await buscarServidoresUsuario(usuarioId);
 
-        const ids = [...new Set(entidades.map((l) => l.usuarioId))];
+    const listas = await Promise.all([...servidores].map((e) => buscarMembrosServidor(e)));
 
-        await publicarParaUsuarios(ids,{tipo:"PRESENCA",usuarioId:usuarioId,status: status});
-    }catch(e) {
-        console.log("Erro ao avisar presença!");
+    const onlines = new Set<String>();
+
+    for(const membros of listas) {
+        for(const id of membros) {
+            if(online.has(id)) {
+                onlines.add(id);
+            }
+        }
+    }
+
+    onlines.delete(usuarioId);
+
+    if(ws.readyState === ws.OPEN) {
+        ws.send(JSON.stringify({tipo:"PRESENCA_INICIAL",online:[...onlines]}));
     }
 }
 
