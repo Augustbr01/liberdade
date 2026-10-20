@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { conectar, publicarParaServidor, publicarParaUsuarios } from "./eventosConexao";
+import { conectar, marcarVivo, publicarParaServidor} from "./eventosConexao";
 import { buscarServidor } from "../config/CacheTyping";
 export const routeWebSocket : (FastifyPluginAsync) = async (fastify) => {
 
@@ -16,6 +16,10 @@ export const routeWebSocket : (FastifyPluginAsync) = async (fastify) => {
 
         socket.on("close", () => {
             desconectar();
+        })
+
+        socket.on("pong", () => {
+            marcarVivo(socket);
         })
 
         socket.on("message", async (raw) => {
