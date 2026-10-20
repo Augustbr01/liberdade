@@ -755,6 +755,14 @@
     color: var(--texto-3);
 }
 
+.membro-status--online {
+    color: var(--online);
+}
+
+.membro-nome--online {
+    color: var(--texto);
+}
+
 /* ---------- telas menores ---------- */
 
 @media (max-width: 1100px) {

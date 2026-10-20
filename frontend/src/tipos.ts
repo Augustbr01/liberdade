@@ -36,7 +36,11 @@ export type EventoGateway =
     | { tipo: "MENSAGEM_CRIADA"; servidorId: string; canalId: string; mensagem: Mensagem }
     | { tipo: "MENSAGEM_EDITADA"; servidorId: string; canalId: string; mensagem: Mensagem }
     | { tipo: "MENSAGEM_DELETADA"; servidorId: string; canalId: string; mensagem: { id: string } }
-    | { tipo: "DIGITANDO"; canalId: string; usuarioId: string };
+    | { tipo: "DIGITANDO"; canalId: string; usuarioId: string }
+    // snapshot ao (re)conectar: ids online entre quem compartilha servidor com você (sem você)
+    | { tipo: "PRESENCA_INICIAL"; online: string[] }
+    // alguém ficou online ou offline (delay de 5s depois da última aba fechar)
+    | { tipo: "PRESENCA"; usuarioId: string; status: "ONLINE" | "OFFLINE" };
 
 // o que o CLIENTE manda pelo WebSocket (entrada). O servidor carimba a identidade
 // (usuarioId) a partir do socket — o cliente só diz "onde".

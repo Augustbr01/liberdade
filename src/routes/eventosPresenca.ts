@@ -48,9 +48,9 @@ export async function avisarPresenca(usuarioId: string,status:Status) {
 
     const destinatarios = new Set<string>();
 
-    for(const membros of lista) {
-        for(const id of membros) {
-            membros.add(id);
+    for (const membros of lista) {
+        for (const id of membros) {
+            destinatarios.add(id);
         }
     }
 

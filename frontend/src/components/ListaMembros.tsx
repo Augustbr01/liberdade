@@ -1,6 +1,7 @@
 import { Crown, Volume2, X } from "lucide-react";
 import type { Membro, ServidorDetalhe, Usuario } from "../api";
 import { usePerfil } from "../contexto/Perfil";
+import { usePresenca } from "../contexto/Presenca";
 import { Avatar } from "./ui/Avatar";
 import { Dica } from "./ui/Dica";
 
@@ -15,6 +16,7 @@ type Props = {
 
 // coluna da direita: quem faz parte do servidor
 export function ListaMembros({ servidor, eu, emChamada, onFechar }: Props) {
+    const { estaOnline } = usePresenca();
     const admins = servidor.membros.filter((m) => m.permissao === "ADMIN");
     const membros = servidor.membros.filter((m) => m.permissao !== "ADMIN");
 
@@ -32,6 +34,7 @@ export function ListaMembros({ servidor, eu, emChamada, onFechar }: Props) {
                           dono={usuario.id === servidor.dono.id}
                           ehVoce={usuario.id === eu.id}
                           sala={emChamada.get(usuario.id)}
+                          online={estaOnline(usuario.id)}
                       />
                   )),
               ];
@@ -50,16 +53,16 @@ export function ListaMembros({ servidor, eu, emChamada, onFechar }: Props) {
     );
 }
 
-type LinhaProps = { usuario: Usuario; dono: boolean; ehVoce: boolean; sala: string | undefined };
+type LinhaProps = { usuario: Usuario; dono: boolean; ehVoce: boolean; sala: string | undefined; online: boolean };
 
-function LinhaMembro({ usuario, dono, ehVoce, sala }: LinhaProps) {
+function LinhaMembro({ usuario, dono, ehVoce, sala, online }: LinhaProps) {
     const { abrirPerfil } = usePerfil();
 
     return (
         <button className="membro" onClick={(e) => abrirPerfil(usuario, e.currentTarget)} aria-haspopup="dialog">
-            <Avatar nome={usuario.nome} url={usuario.avatarUrl} tamanho={32} />
+            <Avatar nome={usuario.nome} url={usuario.avatarUrl} tamanho={32} online={online && !sala} />
             <div className="membro-texto">
-                <span className="membro-nome">
+                <span className={`membro-nome ${online ? "membro-nome--online" : ""}`}>
                     <span className="truncar">{usuario.nome}</span>
                     {dono && (
                         <Dica texto="Dono do servidor">
@@ -71,6 +74,8 @@ function LinhaMembro({ usuario, dono, ehVoce, sala }: LinhaProps) {
                     <span className="membro-status">
                         <Volume2 size={12} /> <span className="truncar">{sala}</span>
                     </span>
+                ) : online ? (
+                    <span className="membro-status membro-status--online">Online</span>
                 ) : (
                     ehVoce && <span className="membro-status">Você</span>
                 )}

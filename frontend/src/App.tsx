@@ -10,6 +10,7 @@ import { ChatSalaProvider } from "./contexto/ChatSala";
 import { ControleVozProvider } from "./contexto/ControleVoz";
 import { FocoChamadaProvider } from "./contexto/FocoChamada";
 import { PerfilProvider } from "./contexto/Perfil";
+import { PresencaProvider } from "./contexto/Presenca";
 import { ToastProvider, useToast } from "./contexto/Toasts";
 import { atualizarResumo, definirPermissao, removerMembro, useServidor } from "./hooks/useServidor";
 import { useSonsDeVoz } from "./hooks/useSonsDeVoz";
@@ -729,6 +730,7 @@ function Aplicacao() {
             onMediaDeviceFailure={aoFalharDispositivo}
         >
             <ControleVozProvider micPreferido={micPreferido} setMicPreferido={setMicPreferido} surdo={surdo} setSurdo={setSurdo}>
+                <PresencaProvider euId={eu.id}>
                 <ChatSalaProvider desde={voz?.desde ?? null}>
                     <FocoChamadaProvider desde={voz?.desde ?? null}>
                         <PerfilProvider
@@ -834,6 +836,7 @@ function Aplicacao() {
                         </PerfilProvider>
                     </FocoChamadaProvider>
                 </ChatSalaProvider>
+                </PresencaProvider>
             </ControleVozProvider>
         </LiveKitRoom>
     );

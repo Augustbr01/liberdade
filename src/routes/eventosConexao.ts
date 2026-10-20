@@ -19,6 +19,12 @@ export function conectar(usuarioId: string, ws:WebSocket) {
         timersOffline.delete(usuarioId);
     }
 
+    const eraOnline = online.has(usuarioId);
+    if (!eraOnline) {
+        online.add(usuarioId);
+        void avisarPresenca(usuarioId, Status.ONLINE);
+    }
+
     return () => {
         set.delete(ws);
         if(set.size === 0 && conexoes.get(usuarioId) === set) {
