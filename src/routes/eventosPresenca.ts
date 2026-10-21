@@ -1,20 +1,40 @@
 import { prisma } from "../../lib/prisma";
 import { Status } from "../interface/Evento";
 import { publicarParaUsuarios } from "./eventosConexao";
-import {WebSocket} from "ws"
 
 const servidoresDoUsuario = new Map<string,Set<string>>();
 const membrosServidores = new Map<string,Set<string>>();
 
-/** Antes do PRESENCA_INICIAL: evita lista de membros/servidores desatualizada no cache. */
-export function refrescarCacheSnapshot(usuarioId: string) {
-    const servidores = servidoresDoUsuario.get(usuarioId);
-    if (servidores) {
-        for (const servidorId of servidores) {
-            membrosServidores.delete(servidorId);
-        }
+interface mapObject {
+    idUsuario : string,
+    idServidor: string
+}
+
+export async function adicionarServidorUsuario(dados : mapObject) {
+
+    const servidores = servidoresDoUsuario.get(dados.idUsuario);
+
+    servidores?.add(dados.idServidor);
+
+    const membros = await prisma.usuarioServidor.findMany({where:{servidorId:dados.idServidor},select:{usuarioId:true}});
+    
+    const set = new Set<string>();
+
+    for(const element of membros) {
+        set.add(element.usuarioId);
     }
-    servidoresDoUsuario.delete(usuarioId);
+
+    set.delete(dados.idUsuario);
+
+    membrosServidores.set(dados.idServidor,set);
+}
+
+export async function removerServidorUsuario(dados : mapObject) {
+    const servidores = servidoresDoUsuario.get(dados.idUsuario);
+
+    servidores?.delete(dados.idServidor);
+
+    membrosServidores.get(dados.idServidor)?.clear();
 }
 
 export async function buscarServidoresUsuario(idUsuario : string) {

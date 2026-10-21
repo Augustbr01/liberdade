@@ -5,6 +5,7 @@ import { devolverTempoCall, limparCall, participantesDaCall, telasDaCall } from 
 import { publicarParaServidor, publicarParaUsuarios } from "./eventosConexao";
 import { roomService } from "../config/RoomService";
 import { AcaoUsuario } from "../interface/Evento";
+import { adicionarServidorUsuario, removerServidorUsuario } from "./eventosPresenca";
 export const RotasServidor : (FastifyPluginAsyncTypebox) = async (fastify) => {
 
     fastify.addHook("onRequest", async (req,rep) => {
@@ -437,6 +438,7 @@ export const RotasServidor : (FastifyPluginAsyncTypebox) = async (fastify) => {
             }
         }})
 
+        await adicionarServidorUsuario({idServidor:entidade.servidorId,idUsuario:idUsuario});
         await publicarParaServidor(entidade.servidorId,{tipo:"MEMBROS",servidorId:entidade.servidorId,usuarioId:idUsuario,acao: AcaoUsuario.ENTROU});
 
         return rep.code(200).send(criado);
@@ -458,6 +460,7 @@ export const RotasServidor : (FastifyPluginAsyncTypebox) = async (fastify) => {
             console.log("opa")
             return rep.code(400).send({mensagem:"Falha ao sair do servidor!"});
         }
+        await removerServidorUsuario({idUsuario:usuarioId,idServidor:servidorId});
         await publicarParaServidor(servidorId,{tipo:"MEMBROS",servidorId:servidorId,usuarioId:usuarioId,acao: AcaoUsuario.SAIU});
         await publicarParaUsuarios([usuarioId],{tipo:"MEMBROS",servidorId:servidorId,usuarioId:usuarioId,acao: AcaoUsuario.SAIU});
 

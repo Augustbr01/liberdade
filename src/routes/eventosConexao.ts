@@ -1,7 +1,7 @@
 import {WebSocket} from "ws"
 import {Status, type Evento} from "../interface/Evento"
 import { prisma } from "../../lib/prisma";
-import { avisarPresenca, buscarMembrosServidor, buscarServidoresUsuario, refrescarCacheSnapshot } from "./eventosPresenca";
+import { avisarPresenca, buscarMembrosServidor, buscarServidoresUsuario} from "./eventosPresenca";
 const conexoes = new Map<string,Set<WebSocket>>();
 const vivos = new WeakMap<WebSocket,boolean>();
 const online = new Set<string>();
@@ -74,7 +74,6 @@ export function marcarVivo(ws : WebSocket) {
 }
 
 export async function enviarSnapshot(usuarioId: string,ws: WebSocket) {
-    refrescarCacheSnapshot(usuarioId);
     const servidores = await buscarServidoresUsuario(usuarioId);
 
     const listas = await Promise.all([...servidores].map((e) => buscarMembrosServidor(e)));
