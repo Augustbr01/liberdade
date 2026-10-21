@@ -1,7 +1,7 @@
 import {WebSocket} from "ws"
 import {Status, type Evento} from "../interface/Evento"
 import { prisma } from "../../lib/prisma";
-import { avisarPresenca, buscarMembrosServidor, buscarServidoresUsuario} from "./eventosPresenca";
+import { adicionarServidorUsuario, avisarPresenca, buscarMembrosServidor, buscarServidoresUsuario} from "./eventosPresenca";
 const conexoes = new Map<string,Set<WebSocket>>();
 const vivos = new WeakMap<WebSocket,boolean>();
 const online = new Set<string>();
@@ -107,6 +107,5 @@ export async function publicarParaUsuarios(ids : string[], evento: Evento) {
 
 export async function publicarParaServidor(servidorId: string, evento : Evento) {
     const entidades = await prisma.usuarioServidor.findMany({where: {servidorId:servidorId},select: {usuarioId:true}});
-
     publicarParaUsuarios(entidades.map((e) => e.usuarioId),evento);
 }

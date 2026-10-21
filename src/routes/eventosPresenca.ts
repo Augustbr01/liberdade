@@ -1,3 +1,4 @@
+import type { Prisma } from "../../generated/prisma/browser";
 import { prisma } from "../../lib/prisma";
 import { Status } from "../interface/Evento";
 import { publicarParaUsuarios } from "./eventosConexao";
@@ -29,12 +30,12 @@ export async function adicionarServidorUsuario(dados : mapObject) {
     membrosServidores.set(dados.idServidor,set);
 }
 
-export async function removerServidorUsuario(dados : mapObject) {
+export function removerServidorUsuario(dados : mapObject) {
     const servidores = servidoresDoUsuario.get(dados.idUsuario);
 
     servidores?.delete(dados.idServidor);
 
-    membrosServidores.get(dados.idServidor)?.clear();
+    membrosServidores.get(dados.idServidor)?.delete(dados.idUsuario);
 }
 
 export async function buscarServidoresUsuario(idUsuario : string) {

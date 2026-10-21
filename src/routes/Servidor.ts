@@ -438,7 +438,6 @@ export const RotasServidor : (FastifyPluginAsyncTypebox) = async (fastify) => {
             }
         }})
 
-        await adicionarServidorUsuario({idServidor:entidade.servidorId,idUsuario:idUsuario});
         await publicarParaServidor(entidade.servidorId,{tipo:"MEMBROS",servidorId:entidade.servidorId,usuarioId:idUsuario,acao: AcaoUsuario.ENTROU});
 
         return rep.code(200).send(criado);
