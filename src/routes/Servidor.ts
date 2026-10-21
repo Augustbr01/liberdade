@@ -302,12 +302,12 @@ export const RotasServidor : (FastifyPluginAsyncTypebox) = async (fastify) => {
 
         try {
             await prisma.usuarioServidor.delete({where:{usuarioId_servidorId:{usuarioId:idMembro,servidorId:idServidor},permissao: {not: Permissao.ADMIN}}});
-            await publicarParaServidor(idServidor,{tipo:"MEMBROS",servidorId:idServidor,usuarioId:idMembro,acao: AcaoUsuario.EXPULSO});
-            await publicarParaUsuarios([idMembro],{tipo:"MEMBROS",servidorId:idServidor,usuarioId:idMembro,acao: AcaoUsuario.EXPULSO});
-            return rep.code(204).send({ok:true});
         }catch(e) {
             return rep.code(400).send({mensagem:"Não foi possível remover o membro!"});
         }
+        await publicarParaServidor(idServidor,{tipo:"MEMBROS",servidorId:idServidor,usuarioId:idMembro,acao: AcaoUsuario.EXPULSO});
+        await publicarParaUsuarios([idMembro],{tipo:"MEMBROS",servidorId:idServidor,usuarioId:idMembro,acao: AcaoUsuario.EXPULSO});
+        return rep.code(204).send({ok:true});
     })
 
     fastify.post("/servidor/sala-criar", {schema: {body: Type.Object({servidorId: Type.String(),tipoSala: Type.Enum(TipoCanal),nomeCanal: Type.String({minLength: 1, maxLength: 50})})}},async (req,rep) => {
