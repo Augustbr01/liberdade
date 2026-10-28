@@ -14,6 +14,7 @@ import { useYoutubeSala } from "../../contexto/YoutubeSala";
 import { pessoasNaSala } from "../../lib/salas";
 import { estaDigitando } from "../../lib/util";
 import type { MapaMembros, Voz } from "../../tipos";
+import type { InfoMonitor } from "./LanHouse";
 import { CanalTexto } from "../CanalTexto";
 import { ChatAoVivo } from "../chamada/ChatAoVivo";
 import { Controles } from "../chamada/Controles";
@@ -431,6 +432,48 @@ function Andar({
         ? { estado: youtube.estado, posicaoAgora: youtube.posicaoAgora, enviar: youtube.enviar, volume: volumeTV, mudo: surdo }
         : undefined;
 
+    // LAN house: a segunda TV (lounge) — por enquanto espelha a mesma escolha do tablet (tv2 não tem estado próprio no controle ainda)
+    const fonte2 = fonteDaTV(controle.estado, youtube.estado, midia.telasDaCall, 2);
+    const telasDaSala2: TelaNaTV[] = (fonte2.tipo === "tela" ? [fonte2.tela] : fonte2.tipo === "mosaico" ? fonte2.telas : []).flatMap((t) =>
+        t.publication.track ? [{ track: t.publication.track, nome: t.participant.isLocal ? "Você" : membros.get(t.participant.identity)?.nome ?? "Alguém" }] : []);
+    const youtubeNaTV2: YoutubeNaTV | undefined = salaDaCall && fonte2.tipo === "youtube" && youtube.estado?.video
+        ? { estado: youtube.estado, posicaoAgora: youtube.posicaoAgora, enviar: youtube.enviar, volume: volumeTV, mudo: surdo }
+        : undefined;
+
+    // monitores da LAN house: cada assento ocupado -> quem está sentado e a tela dele (só na sala da sua call)
+    const monitores = new Map<string, InfoMonitor>();
+    if (salaDaCall) {
+        const canal = canais.get(salaDaCall.canalId);
+        if (canal && canal.modelo === "LANHOUSE") {
+            // quem está no 3D sentado nessa sala
+            for (const [id, p] of posicoes) {
+                const assento = planta.assentos.find((a) => a.salaId === salaDaCall.canalId && Math.hypot(a.x - p.x, a.z - p.z) < 0.35);
+                if (assento && assento.id.startsWith(salaDaCall.canalId + ":lan:")) {
+                    const participante = remotosPorId.get(id);
+                    const telaPub = participante?.getTrackPublication(Track.Source.ScreenShare);
+                    const tela = telaPub?.track;
+                    monitores.set(assento.id, { nome: participante?.name ?? "Alguém", track: tela });
+                }
+            }
+            // quem está pelo modo clássico na sala (fora do 3D)
+            const participantes = (canais.get(salaDaCall.canalId)?.participantes ?? []).filter((p) => p.id !== eu.id && !pessoas.some((pp) => pp.usuario.id === p.id));
+            const ocupados = new Set<string>();
+            for (const p of pessoas) {
+                if (p.lerAlvo()?.postura === 1) { // POSTURA.SENTADO
+                    const alvo = p.lerAlvo(); const a = alvo ? planta.assentos.find((q) => Math.hypot(q.x - alvo.x, q.z - alvo.z) < 0.35) : null;
+                    if (a) ocupados.add(a.id);
+                }
+            }
+            const livres = planta.assentos.filter((a) => a.salaId === salaDaCall.canalId && !ocupados.has(a.id));
+            participantes.forEach((usuario, i) => {
+                const assento = livres[i];
+                if (assento && usuario) {
+                    monitores.set(assento.id, { nome: usuario.nome, track: undefined });
+                }
+            });
+        }
+    }
+
     // o som da tela que está na TV sai pelas caixas da sala (a sua própria tela você não ouve)
     const somTV: SomDaTV | null = salaDaCall && fonte.tipo === "tela" && !fonte.tela.participant.isLocal && controle.estado
         ? {
@@ -642,6 +685,9 @@ function Andar({
                     salaDaCall={vozNoAndar}
                     telasDaSala={telasDaSala}
                     youtube={youtubeNaTV}
+                    telasDaSala2={telasDaSala2}
+                    youtube2={youtubeNaTV2}
+                    monitores={monitores}
                     portaAberta={portaAberta}
                     portaFechada={portaFechada}
                     parado={parado}
@@ -655,7 +701,7 @@ function Andar({
                     salaAtual={salaAtual}
                     chat={chatHolograma}
                     telao={naSalaDaCall && salaDaCall ? { x: salaDaCall.tv.x, y: salaDaCall.tv.y, z: salaDaCall.tv.z, rot: salaDaCall.tv.rot } : null}
-                somTV={somTV}
+                    somTV={somTV}
                     onPostura={setPostura}
                     onSala={aoMudarSala}
                     onFoco={setFoco}

@@ -52,6 +52,12 @@ export type SalaPlanta = {
     caixasSom: CaixaSom[];
     // o controle da sala: deitado na mesa de centro (sala gamer) ou num pedestal (cinema)
     tablet: Ponto & { y: number; rot: number; inclinacao: number };
+    // LAN house: a segunda TV (lounge) com o seu próprio tablet e caixas de som, e o interruptor da luz.
+    // O tablet/caixas "de cima" (tv, tablet, caixasSom) são da primeira TV (o telão da mesa LAN)
+    tv2?: Ponto & { rot: number; y: number; largura: number };
+    tablet2?: Ponto & { y: number; rot: number; inclinacao: number };
+    caixasSom2?: CaixaSom[];
+    interruptor?: Ponto;
     // quem está pelo modo clássico e não coube nos assentos fica em pé aqui
     lugares: (Ponto & { rot: number })[];
     // holograma do chat da call (sala gamer): o retângulo dele no andar, pra saber se a mira está
@@ -60,7 +66,8 @@ export type SalaPlanta = {
 };
 
 export type Quadro = Ponto & { canalId: string; rot: number };
-export type Interativo = Ponto & { id: string; raio: number; tipo: "elevador" | "texto" | "assento" | "tablet" | "chat"; canalId?: string; assentoId?: string };
+// alvo (tablet): qual TV ele controla (1 = a TV da sala, 2 = a segunda TV da LAN house)
+export type Interativo = Ponto & { id: string; raio: number; tipo: "elevador" | "texto" | "assento" | "tablet" | "chat" | "interruptor"; canalId?: string; assentoId?: string; alvo?: 1 | 2 };
 
 export type Planta = {
     paredes: Parede[];
@@ -93,6 +100,7 @@ const LARGURA = 10; // metade da largura do prédio
 const CORREDOR = 2; // metade da largura do corredor
 const VAGA = 8; // comprimento de uma sala comum ao longo do corredor
 const VAGA_CINEMA = 16;
+const VAGA_LAN = 16; // a LAN house ocupa 16 m de corredor (mesa LAN de um lado, lounge do outro)
 const FILAS_CINEMA = 5;
 const POLTRONAS_POR_FILA = 9;
 const FUNDO_FILA = 1.9; // profundidade de cada degrau
@@ -212,7 +220,8 @@ export function gerarPlanta(canais: Pick<Canal, "id" | "tipo" | "modelo">[]): Pl
     const salas: SalaPlanta[] = voz.map((canal) => {
         const lado: -1 | 1 = usado[1] < usado[-1] ? 1 : -1;
         const cinema = canal.modelo === "CINEMA";
-        const comprimento = cinema ? VAGA_CINEMA : VAGA;
+        const lan = canal.modelo === "LANHOUSE";
+        const comprimento = cinema ? VAGA_CINEMA : lan ? VAGA_LAN : VAGA;
         const altura = cinema ? ALTURA_CINEMA : ALTURA;
         const zPerto = -usado[lado];
         const zLonge = zPerto - comprimento;
@@ -241,7 +250,9 @@ export function gerarPlanta(canais: Pick<Canal, "id" | "tipo" | "modelo">[]): Pl
         };
         return cinema
             ? salaCinema(base, zLonge, zPerto, moveis, degraus, solidosExtra)
-            : salaComum(base, zLonge, zPerto, solidosExtra);
+            : lan
+                ? salaLanHouse(base, zLonge, zPerto, moveis, solidosExtra)
+                : salaComum(base, zLonge, zPerto, solidosExtra);
     });
     const fim = -Math.max(VAGA, usado[-1], usado[1]) - 2;
 
@@ -304,7 +315,10 @@ export function gerarPlanta(canais: Pick<Canal, "id" | "tipo" | "modelo">[]): Pl
         })),
         ...assentos.map((a): Interativo => ({ id: `assento-${a.id}`, tipo: "assento", assentoId: a.id, x: a.x, z: a.z, raio: 1.15 })),
         // tablet: só com a mira em cima dele (ver Jogador), até 3,6 m dos olhos (alcança do sofá e dos puffs)
-        ...salas.map((s): Interativo => ({ id: `tablet-${s.canalId}`, tipo: "tablet", canalId: s.canalId, x: s.tablet.x, z: s.tablet.z, raio: 3.6 })),
+        ...salas.map((s): Interativo => ({ id: `tablet-${s.canalId}`, tipo: "tablet", canalId: s.canalId, alvo: 1, x: s.tablet.x, z: s.tablet.z, raio: 3.6 })),
+        // LAN house: o tablet da segunda TV (lounge) e o interruptor da luz (perto e olhando, como o elevador)
+        ...salas.flatMap((s): Interativo[] => (s.tablet2 ? [{ id: `tablet2-${s.canalId}`, tipo: "tablet", canalId: s.canalId, alvo: 2, x: s.tablet2.x, z: s.tablet2.z, raio: 3.6 }] : [])),
+        ...salas.flatMap((s): Interativo[] => (s.interruptor ? [{ id: `interruptor-${s.canalId}`, tipo: "interruptor", canalId: s.canalId, x: s.interruptor.x, z: s.interruptor.z, raio: 1.5 }] : [])),
         // holograma do chat: só com a mira em cima da tela dele (ver Jogador), até 9 m
         ...salas.flatMap((s): Interativo[] => (s.chat ? [{ id: `chat-${s.canalId}`, tipo: "chat", canalId: s.canalId, x: s.chat.x, z: s.chat.z, raio: 9 }] : [])),
     ];
@@ -546,6 +560,168 @@ function salaCinema(base: BaseSala, zLonge: number, zPerto: number, moveis: Move
         assentos,
         // não coube nas 45 poltronas: em pé na frente do telão
         lugares: Array.from({ length: 12 }, (_, n) => ({ x: xc + (n % 6 - 2.5) * 1.1, z: zLonge + 2.8 + Math.floor(n / 6) * 1.1, rot: 0 })),
+    };
+}
+
+// ---------- LAN house ----------
+// Medidas no "espaço da sala" (igual à sala gamer): origem no centro do piso, -z = parede da TV
+// (a de fora), +z = parede do corredor (a porta), x ao longo do corredor. A sala tem 15,8 × 7,8 m:
+// de um lado a mesa LAN (10 PCs, telão na parede) e do outro o lounge (sofá em U + TV).
+// O desenho (LanHouse.tsx) usa estas medidas, então colisão, assentos e móveis batem.
+export const LAN = {
+    meiaX: 7.9,
+    meiaZ: 3.9,
+    lanX: -4,
+    loungeX: 4,
+    mesa: { z0: -3.72, comprimento: 6.05, largura: 1.7, altura: 0.75 },
+    cadeiraX: 1.28,
+    sofa: { z: 0.9, modulo: 0.85, canto: 0.95 },
+    mesaCentro: { x: 4, z: -0.45 },
+    portaX: -0.4,
+    interruptor: { x: 0.9, y: 1.3 },
+    tv1: { x: -4, y: 1.98, largura: 4.0 },
+    tv2: { x: 4, y: 1.72, largura: 3.6 },
+    pedestal: { x: -4, z: 2.85 },
+    balcao: { x: -5.6, z: 3.55 },
+    geladeira: { x: -7.45, z: 3.55 },
+} as const;
+
+// o setup i (0..4) de cada lado da mesa fica neste z
+export const zSetupLan = (i: number) => LAN.mesa.z0 + 0.6 + i * 1.2;
+export const idAssentoLan = (canalId: string, lado: -1 | 1, i: number) => canalId + ":lan:" + (lado < 0 ? 0 : 1) + ":" + i;
+
+// módulos do sofá em U, no espaço do sofá (origem no meio das costas, girado 180° na sala: o U abre pra TV).
+// xu/zu: centro do módulo; ryu: pra onde ele olha (0 = pra frente do U); w: largura; costas: b = atrás, l/r = laterais
+export type ModuloSofaLan = { xu: number; zu: number; ryu: number; w: number; costas: string };
+export function modulosSofaLan(): ModuloSofaLan[] {
+    const { modulo: SW, canto: CW } = LAN.sofa;
+    const cxo = 2 * SW + CW / 2;
+    const lista: ModuloSofaLan[] = [];
+    for (let i = 0; i < 4; i++) lista.push({ xu: -1.5 * SW + i * SW, zu: 0, ryu: 0, w: SW, costas: "b" });
+    lista.push({ xu: -cxo, zu: 0, ryu: 0, w: CW, costas: "bl" }, { xu: cxo, zu: 0, ryu: 0, w: CW, costas: "br" });
+    for (let i = 0; i < 2; i++) {
+        const zu = CW / 2 + SW / 2 + i * SW;
+        lista.push({ xu: -cxo, zu, ryu: Math.PI / 2, w: SW, costas: "b" }, { xu: cxo, zu, ryu: -Math.PI / 2, w: SW, costas: "b" });
+    }
+    return lista;
+}
+
+// totens de LED: x, z no espaço da sala (parede do corredor, mais dois na parede da direita)
+export const TOTENS_LAN: readonly (readonly [number, number])[] = [
+    [-3.4, 3.68], [-2.2, 3.68], [1.9, 3.68], [3.1, 3.68], [4.3, 3.68], [5.5, 3.68], [6.7, 3.68],
+    [7.68, -1.5], [7.68, 1.5],
+];
+
+// LAN house: 10 setups na mesa + 10 lugares no sofá em U, duas TVs (cada uma com o seu tablet)
+function salaLanHouse(base: BaseSala, zLonge: number, zPerto: number, moveis: Movel[], solidos: Solido[]): SalaPlanta {
+    const { lado, canalId } = base;
+    const zc = (zPerto + zLonge) / 2;
+    const xc = lado * (CORREDOR + LARGURA) / 2;
+    const virada = -lado * Math.PI / 2;
+    const sala: Referencia = { x: xc, z: zc, rot: virada };
+    const L = LAN;
+    const BZ = -L.meiaZ;
+    const p = (lx: number, lz: number) => noMundo(sala, lx, lz);
+    const tzMesa = L.mesa.z0 + L.mesa.comprimento / 2;
+
+    // 10 PCs, de frente pra trás, esquerda e direita da mesa. Quem senta olha pra mesa
+    const assentos: Assento[] = [];
+    for (let i = 0; i < 5; i++) {
+        for (const s of [-1, 1] as const) {
+            assentos.push({ ...p(L.lanX + s * L.cadeiraX, zSetupLan(i)), id: idAssentoLan(canalId, s, i), salaId: canalId, y: 0, rot: s * Math.PI / 2 + virada });
+        }
+    }
+
+    // sofá em U: 10 lugares. O sofá está girado 180° na sala, então (xu, zu) vira (loungeX - xu, sofa.z - zu)
+    const modulos = modulosSofaLan();
+    const doSofa = (xu: number, zu: number) => ({ x: L.loungeX - xu, z: L.sofa.z - zu });
+    const ordemSofa = [1, 2, 0, 3, 4, 5, 6, 7, 8, 9];
+    ordemSofa.forEach((k, n) => {
+        const m = modulos[k]!;
+        const c = doSofa(m.xu, m.zu);
+        // um pouco pra frente do centro do módulo (a almofada do assento é mais pra frente)
+        const frente = { x: -Math.sin(m.ryu), z: -Math.cos(m.ryu) };
+        assentos.push({ ...p(c.x + frente.x * 0.06, c.z + frente.z * 0.06), id: canalId + ":sofa:" + n, salaId: canalId, y: 0, rot: m.ryu + virada });
+    });
+
+    // ---------- colisão ----------
+    const ref: Referencia = sala;
+    solidos.push(
+        // a mesa LAN (os monitores e a divisória ficam em cima dela)
+        caixa(compor(ref, L.lanX, tzMesa), L.mesa.largura / 2, L.mesa.comprimento / 2, L.mesa.altura),
+        // só o encosto de cada cadeira bloqueia (o assento é onde a pessoa senta)
+        ...[-1, 1].flatMap((s) => [0, 1, 2, 3, 4].map((i) => caixa(compor(ref, L.lanX + s * (L.cadeiraX + 0.3), zSetupLan(i)), 0.07, 0.27, 1.25))),
+        // balcão e geladeira
+        caixa(compor(ref, L.balcao.x, L.balcao.z), 1.3, 0.3, 1.04),
+        caixa(compor(ref, L.geladeira.x, L.geladeira.z), 0.35, 0.3, 1.9),
+        // rack da TV do lounge e a mesa de centro
+        caixa(compor(ref, L.loungeX, BZ + 0.3), 1.9, 0.225, 0.45),
+        cilindro(p(L.mesaCentro.x, L.mesaCentro.z), 0.5, 0.45),
+    );
+    // sofá: em cada módulo, o assento com almofadas, o encosto e as laterais dos cantos
+    for (const m of modulos) {
+        const c = doSofa(m.xu, m.zu);
+        const mod = compor(ref, c.x, c.z, m.ryu + Math.PI);
+        solidos.push(caixa(mod, m.w / 2, 0.475, 0.56));
+        if (m.costas.includes("b")) solidos.push(caixa(compor(mod, 0, -0.375), m.w / 2, 0.1, 0.98));
+        if (m.costas.includes("l")) solidos.push(caixa(compor(mod, -m.w / 2 + 0.1, 0), 0.1, 0.475, 0.98));
+        if (m.costas.includes("r")) solidos.push(caixa(compor(mod, m.w / 2 - 0.1, 0), 0.1, 0.475, 0.98));
+    }
+    // encosto no fim de cada braço do U
+    {
+        const { modulo: SW, canto: CW } = L.sofa;
+        const cxo = 2 * SW + CW / 2;
+        const endZ = CW / 2 + 2 * SW + 0.1;
+        for (const s of [-1, 1]) {
+            const c = doSofa(s * cxo, endZ);
+            solidos.push(caixa(compor(ref, c.x, c.z, Math.PI), 0.475, 0.1, 0.9));
+        }
+    }
+    // totens de LED nas paredes
+    for (const [x, z] of TOTENS_LAN) solidos.push(caixa(compor(ref, x, z), 0.07, 0.07, 2.15));
+
+    // plantas nos cantos do fundo e no canto da porta
+    for (const [x, z] of [[-L.meiaX + 0.5, BZ + 0.5], [L.meiaX - 0.5, BZ + 0.5], [L.meiaX - 0.5, L.meiaZ - 0.6]] as const) {
+        const w = p(x, z);
+        moveis.push({ tipo: "planta", x: w.x, z: w.z, rot: 0 });
+    }
+    // o pedestal do tablet do telão (na ponta da mesa LAN)
+    const pedestal = p(L.pedestal.x, L.pedestal.z);
+    moveis.push({ tipo: "pedestal", x: pedestal.x, z: pedestal.z, rot: 0 });
+
+    // surround de cada TV: três atrás da parede (ocultas) e duas na parede do corredor
+    const surround = (cx: number): CaixaSom[] => [
+        { ...p(cx - 2.4, BZ + 0.5), y: 2.4, tipo: "oculta", rot: virada },
+        { ...p(cx, BZ + 0.5), y: 2.4, tipo: "oculta", rot: virada },
+        { ...p(cx + 2.4, BZ + 0.5), y: 2.4, tipo: "oculta", rot: virada },
+        { ...p(cx - 2.4, L.meiaZ - 0.12), y: 2.0, tipo: "parede", rot: Math.PI + virada },
+        { ...p(cx + 2.4, L.meiaZ - 0.12), y: 2.0, tipo: "parede", rot: Math.PI + virada },
+    ];
+
+    // quem está pelo modo clássico e não coube nos 20 lugares fica em pé entre as duas áreas
+    const lugares = Array.from({ length: 12 }, (_, n) => {
+        const l = { x: -1.6 + (n % 4) * 1.0, z: -2.4 + Math.floor(n / 4) * 0.9 };
+        return { ...p(l.x, l.z), rot: virada };
+    });
+
+    const porta = p(L.portaX, L.meiaZ + e);
+    return {
+        ...base,
+        modelo: "LANHOUSE",
+        centro: { x: xc, z: zc },
+        porta: { x: lado * CORREDOR, z: porta.z },
+        tv: { ...p(L.tv1.x, BZ + 0.08), rot: virada, y: L.tv1.y, largura: L.tv1.largura },
+        tv2: { ...p(L.tv2.x, BZ + 0.08), rot: virada, y: L.tv2.y, largura: L.tv2.largura },
+        assentos,
+        caixasSom: surround(L.lanX),
+        caixasSom2: surround(L.loungeX),
+        // o tablet do telão: num pedestal na ponta da mesa, inclinado pra quem chega pela porta
+        tablet: { ...pedestal, y: 1.08, rot: virada, inclinacao: -0.6 },
+        // o tablet da TV do lounge: deitado na mesa de centro (topo em 0,445)
+        tablet2: { ...p(L.mesaCentro.x, L.mesaCentro.z), y: 0.452, rot: virada, inclinacao: -Math.PI / 2 },
+        interruptor: p(L.interruptor.x, L.meiaZ - 0.12),
+        lugares,
+        chat: null,
     };
 }
 

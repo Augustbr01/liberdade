@@ -45,6 +45,8 @@ export type EstadoSala = {
     canalId: string;
     // TELA: a tela compartilhada de `identidade` (usuarioId)
     tv: { modo: ModoTV; identidade: string | null };
+    // segunda TV (lounge da LanHouse): mesmo formato; salas de uma TV só nunca mexem nela
+    tv2: { modo: ModoTV; identidade: string | null };
     volume: number;
     surround: boolean;
     luzes: ModoLuzes;

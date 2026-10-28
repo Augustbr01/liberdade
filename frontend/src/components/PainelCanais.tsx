@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
-import { Building2, ChevronDown, Clapperboard, DoorOpen, Hash, Loader2, Plus, Settings, Trash2, UserPlus, Volume2 } from "lucide-react";
+import { Building2, ChevronDown, Clapperboard, DoorOpen, Hash, Loader2, Monitor, Plus, Settings, Trash2, UserPlus, Volume2 } from "lucide-react";
 import type { Canal, ServidorDetalhe, TipoCanal, Usuario } from "../api";
 import { useControleVoz } from "../contexto/ControleVoz";
 import { chaveTela, useFocoChamada } from "../contexto/FocoChamada";
@@ -114,7 +114,9 @@ export function PainelCanais(props: Props) {
                                             >
                                                 {c.modelo === "CINEMA"
                                                     ? <Clapperboard size={18} className="canal-icone" />
-                                                    : <Volume2 size={18} className="canal-icone" />}
+                                                    : c.modelo === "LANHOUSE"
+                                                        ? <Monitor size={18} className="canal-icone" />
+                                                        : <Volume2 size={18} className="canal-icone" />}
                                                 <span className="truncar">{c.nome}</span>
                                                 {/* há quanto tempo a chamada da sala está rolando (pra quem está fora também) */}
                                                 {c.inicioCall && (pessoas.length > 0 || conectado) && (

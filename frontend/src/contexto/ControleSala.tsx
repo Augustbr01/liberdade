@@ -55,10 +55,12 @@ export type FonteTV = { tipo: "youtube" } | { tipo: "tela"; tela: TrackReference
 
 // o que aparece na TV da sala (e no destaque do modo clássico), pelo que escolheram no tablet.
 // Se a escolha não existe mais (a pessoa parou de compartilhar, o vídeo acabou), volta pro automático
-export function fonteDaTV(sala: EstadoSala | null, youtube: EstadoYoutube | null, telas: TrackReference[]): FonteTV {
+export function fonteDaTV(sala: EstadoSala | null, youtube: EstadoYoutube | null, telas: TrackReference[], alvo: 1 | 2 = 1): FonteTV {
     const temYoutube = !!youtube?.video;
     const telaDe = (id: string | null) => telas.find((t) => t.participant.identity === id && t.source === Track.Source.ScreenShare);
-    const modo = sala?.tv.modo ?? "AUTO";
+    // alvo 2 = a segunda TV da LanHouse (sem estado dela ainda, é automática)
+    const tv = (alvo === 2 ? sala?.tv2 : sala?.tv) ?? { modo: "AUTO" as const, identidade: null };
+    const modo = tv.modo;
 
     if (modo === "DESLIGADA") return { tipo: "nada" };
     // mosaico com uma tela só é a tela inteira; sem nenhuma, cai no automático
@@ -69,7 +71,7 @@ export function fonteDaTV(sala: EstadoSala | null, youtube: EstadoYoutube | null
     }
     if (modo === "YOUTUBE" && temYoutube) return { tipo: "youtube" };
     if (modo === "TELA") {
-        const tela = telaDe(sala?.tv.identidade ?? null);
+        const tela = telaDe(tv.identidade);
         if (tela) return { tipo: "tela", tela };
     }
     if (temYoutube) return { tipo: "youtube" };

@@ -12,7 +12,7 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 import type { EstadoLed } from "../../tipos";
 import { Instancias, material } from "./Moveis";
 import { paletaDaSala } from "./paletas";
-import { ALTURA, GAMER, type SalaPlanta } from "./planta";
+import { ALTURA, GAMER, LAN, type SalaPlanta } from "./planta";
 import { texturaBrilho, texturaLavagem } from "./texturas";
 
 const H = ALTURA;
@@ -369,6 +369,17 @@ const LUZES: { cor: "a" | "b" | "anel"; x: number; y: number; z: number; forca: 
     { cor: "b", x: M - 0.7, y: 1.4, z: -1.8, forca: 2, alcance: 3 }, // prateleiras e fliperama
     { cor: "anel", x: GAMER.mesa.x, y: H - 0.4, z: GAMER.mesa.z, forca: 14, alcance: 9 }, // anel do teto
 ];
+// as 8 luzes da LAN house (mesmo número: ver o aviso acima), no espaço da sala
+const LUZES_LAN: typeof LUZES = [
+    { cor: "anel", x: LAN.lanX, y: H - 0.4, z: -0.7, forca: 14, alcance: 9 }, // painéis de teto da mesa LAN
+    { cor: "anel", x: LAN.loungeX, y: H - 0.4, z: -0.4, forca: 14, alcance: 9 }, // painéis de teto do lounge
+    { cor: "a", x: LAN.lanX, y: LAN.tv1.y, z: -LAN.meiaZ + 0.6, forca: 3, alcance: 4.5 }, // bias do telão
+    { cor: "a", x: LAN.lanX, y: 0.25, z: -0.7, forca: 1.5, alcance: 3.5 }, // underglow da mesa
+    { cor: "b", x: LAN.loungeX, y: LAN.tv2.y, z: -LAN.meiaZ + 0.5, forca: 2.2, alcance: 3.5 }, // moldura da TV do lounge
+    { cor: "a", x: LAN.loungeX, y: 0.15, z: 1.0, forca: 1.4, alcance: 3 }, // sofá em U
+    { cor: "b", x: LAN.lanX, y: H - 0.7, z: -0.7, forca: 2, alcance: 4 }, // barras suspensas
+    { cor: "a", x: 0, y: H - 0.3, z: 0, forca: 3.5, alcance: 7 }, // sanca
+];
 const COR_ANEL = new THREE.Color("#ffe6c8");
 
 export function LuzesSalaGamer({ sala, led, apagada }: { sala: SalaPlanta | null; led: EstadoLed | null; apagada: boolean }) {
@@ -382,7 +393,8 @@ export function LuzesSalaGamer({ sala, led, apagada }: { sala: SalaPlanta | null
     useFrame(({ clock }) => {
         const { sala: s, led: l, apagada: escura } = estado.current;
         const k = s ? coresLed(s.canalId, l, clock.elapsedTime, a, b) : 0;
-        LUZES.forEach((def, i) => {
+        // a LAN house tem as suas 8 luzes (a mesma quantidade: trocar recompilaria os materiais)
+        (s?.modelo === "LANHOUSE" ? LUZES_LAN : LUZES).forEach((def, i) => {
             const luz = refs.current[i];
             if (!luz) return;
             if (!s) {

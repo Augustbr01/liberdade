@@ -52,6 +52,8 @@ export type EstadoSala = {
     canalId: string;
     // TELA: a tela compartilhada de `identidade` (usuarioId)
     tv: { modo: ModoTV; identidade: string | null };
+    // segunda TV (lounge da LanHouse). Servidor antigo não manda
+    tv2?: { modo: ModoTV; identidade: string | null };
     volume: number;
     surround: boolean;
     luzes: ModoLuzes;
@@ -59,8 +61,8 @@ export type EstadoSala = {
     ultima: { usuarioId: string; acao: string } | null;
 };
 export type ComandoSala =
-    | { acao: "TV"; modo: "AUTO" | "YOUTUBE" | "MOSAICO" | "DESLIGADA" }
-    | { acao: "TV_TELA"; identidade: string }
+    | { acao: "TV"; modo: "AUTO" | "YOUTUBE" | "MOSAICO" | "DESLIGADA"; alvo?: 1 | 2 }
+    | { acao: "TV_TELA"; identidade: string; alvo?: 1 | 2 }
     | { acao: "VOLUME"; volume: number }
     | { acao: "SURROUND"; ligado: boolean }
     | { acao: "LUZES"; modo: ModoLuzes }

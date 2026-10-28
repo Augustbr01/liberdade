@@ -12,6 +12,7 @@ import tunnel from "tunnel-rat";
 import type { Participant, Room, Track } from "livekit-client";
 import type { ServidorDetalhe, Usuario } from "../../api";
 import type { EstadoLed } from "../../tipos";
+import type { InfoMonitor } from "./LanHouse";
 import { AudioEspacial, type SomDaTV } from "./AudioEspacial";
 import { Boneco, type Papel } from "./Boneco";
 import { useConfigMundo } from "./config";
@@ -64,6 +65,10 @@ type Props = {
     // LEDs da sala da sua call (controle da sala) e a sala em que você está
     led: EstadoLed | null;
     salaAtual: string | null;
+    // LAN house: o que aparece na segunda TV (lounge) e nos monitores (lugar ocupado -> quem senta e a tela dele)
+    telasDaSala2: TelaNaTV[];
+    youtube2: YoutubeNaTV | undefined;
+    monitores: Map<string, InfoMonitor> | null;
     // chat da sua call, pro holograma da sala
     chat: LinhaChat[];
     telao: { x: number; y: number; z: number; rot: number } | null;
@@ -178,6 +183,9 @@ export function Cena(props: Props) {
                     salaDaCall={props.salaDaCall}
                     telasDaSala={props.telasDaSala}
                     youtube={props.youtube}
+                    telasDaSala2={props.telasDaSala2}
+                    youtube2={props.youtube2}
+                    monitores={props.monitores}
                     salaEscura={props.escuro ? props.salaDaCall : null}
                     led={props.led}
                     salaAtual={props.salaAtual}

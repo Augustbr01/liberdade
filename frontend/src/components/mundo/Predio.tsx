@@ -17,6 +17,7 @@ import {
 import { Holograma, type LinhaChat } from "./Holograma";
 import { FORCA_LED, LuzesSalaGamer, SalasGamer } from "./SalaGamer";
 import { LedsCinema } from "./CinemaGamer";
+import { SalasLanHouse, type InfoMonitor } from "./LanHouse";
 import {
     repetida, texturaBrilho, texturaCarpete, texturaCidade, texturaLavagem, texturaLuz, texturaPisoEscuro, texturaRipado, texturaTexto,
     type LinhaTexto,
@@ -231,24 +232,25 @@ export type TelaNaTV = { track: Track; nome: string };
 // TV da sala (ou o telão do cinema): o YouTube junto, a tela compartilhada da call em que
 // você está (ou várias, em mosaico), ou o nome da sala
 // destaque: a cor B dos LEDs da sala (o "CINEMA" do telão)
-function TV({ sala, nome, telas, youtube, destaque }: { sala: SalaPlanta; nome: string; telas: TelaNaTV[]; youtube: YoutubeNaTV | undefined; destaque: string }) {
+function TV({ sala, nome, telas, youtube, destaque, posicao, subtitulo }: { sala: SalaPlanta; nome: string; telas: TelaNaTV[]; youtube: YoutubeNaTV | undefined; destaque: string; posicao?: SalaPlanta["tv"]; subtitulo?: string }) {
     const cinema = sala.modelo === "CINEMA";
+    const tv = posicao ?? sala.tv;
     const video = useTexturaVideo(telas.length === 1 ? telas[0]!.track : undefined, cinema ? 1920 : 1280, cinema ? 1080 : 720);
     // onde o <Html> pendura o iframe: sem isso o drei troca de elemento quando o canvas
     // liga os eventos, recria a raiz React e o player some (a raiz velha apaga a nova)
     const gl = useThree((s) => s.gl);
     const portal = useMemo(() => ({ current: gl.domElement.parentElement as HTMLElement }), [gl]);
-    const L = sala.tv.largura;
+    const L = tv.largura;
     const A = L * 9 / 16;
     // a tela cabe inteira dentro do 16:9, com faixa preta se precisar
     const [vl, va] = video ? (video.aspecto > 16 / 9 ? [L, L / video.aspecto] : [A * video.aspecto, A]) : [L, A];
 
     return (
-        <group position={[sala.tv.x, sala.tv.y, sala.tv.z]} rotation={[0, sala.tv.rot, 0]}>
+        <group position={[tv.x, tv.y, tv.z]} rotation={[0, tv.rot, 0]}>
             {cinema ? (
                 // cortinas de veludo dos dois lados do telão
                 [-1, 1].map((s) => (
-                    <mesh key={s} geometry={DOBRAS} material={VELUDO} position={[s * (L / 2 + 0.42), sala.altura / 2 - sala.tv.y - 0.1, 0.12]} scale={[0.56, sala.altura - 0.25, 1]} />
+                    <mesh key={s} geometry={DOBRAS} material={VELUDO} position={[s * (L / 2 + 0.42), sala.altura / 2 - tv.y - 0.1, 0.12]} scale={[0.56, sala.altura - 0.25, 1]} />
                 ))
             ) : null /* sala gamer: a bias light e as ripas atrás da TV são da SalaGamer */}
             <mesh geometry={CAIXA} material={material("#060607", 0.4)} position={[0, 0, 0.02]} scale={[L + (cinema ? 0.2 : 0.08), A + (cinema ? 0.2 : 0.08), 0.05]} />
@@ -279,14 +281,13 @@ function TV({ sala, nome, telas, youtube, destaque }: { sala: SalaPlanta; nome: 
                     largura={L}
                     linhas={cinema
                         ? [{ texto: "CINEMA", tamanho: 40, cor: destaque, peso: 700 }, { texto: nome, tamanho: 84, peso: 700 }, { texto: "Coloque um vídeo do YouTube ou compartilhe a tela", tamanho: 26, cor: "#85858e", peso: 500 }]
-                        : [{ texto: nome, tamanho: 64, cor: "#f2f2f4", peso: 600 }, { texto: "Ninguém compartilhando a tela", tamanho: 26, cor: "#8a8a92", peso: 400 }]}
+                        : [{ texto: nome, tamanho: 64, cor: "#f2f2f4", peso: 600 }, { texto: subtitulo ?? "Ninguém compartilhando a tela", tamanho: 26, cor: "#8a8a92", peso: 400 }]}
                     opcoes={{ largura: 1024, altura: 576, fundo: cinema ? "#101013" : "#0f0f12" }}
                 />
             )}
         </group>
     );
 }
-
 // várias telas ao mesmo tempo na TV: grade quase quadrada (2 = lado a lado, 3-4 = 2×2, 5-6 = 3×2...),
 // com a última linha centralizada. pixels = largura do vídeo da TV inteira (cada tela pede a sua parte)
 function Mosaico({ telas, largura, altura, pixels }: { telas: TelaNaTV[]; largura: number; altura: number; pixels: number }) {
@@ -367,7 +368,7 @@ function Porta({ sala, nome, pessoas, cor }: { sala: SalaPlanta; nome: string; p
                 rotation={[0, virada, 0]}
                 largura={1.5}
                 linhas={[
-                    { texto: sala.modelo === "CINEMA" ? `Cinema · ${nome}` : nome, tamanho: 58, cor: "#f2f2f4", peso: 600 },
+                    { texto: sala.modelo === "CINEMA" ? `Cinema · ${nome}` : sala.modelo === "LANHOUSE" ? `LAN · ${nome}` : nome, tamanho: 58, cor: "#f2f2f4", peso: 600 },
                     { texto: pessoas === 0 ? "vazia" : pessoas === 1 ? "1 pessoa" : `${pessoas} pessoas`, tamanho: 34, cor: pessoas > 0 ? cor : "#8a8a92", peso: 500 },
                 ]}
                 opcoes={{ largura: 768, altura: 220, fundo: "rgba(10, 10, 13, 0.92)", raio: 18 }}
@@ -414,7 +415,7 @@ function DecoracaoCinema({ sala, degraus }: { sala: SalaPlanta; degraus: Degrau[
 function CaixasSom({ sala }: { sala: SalaPlanta }) {
     return (
         <>
-            {sala.caixasSom.filter((c) => c.tipo === "barra" || c.tipo === "parede").map((c, i) => (
+            {[...sala.caixasSom, ...(sala.caixasSom2 ?? [])].filter((c) => c.tipo === "barra" || c.tipo === "parede").map((c, i) => (
                 <group key={i} position={[c.x, c.y, c.z]} rotation={[0, c.rot, 0]}>
                     <mesh
                         geometry={CAIXA}
@@ -434,8 +435,7 @@ function CaixasSom({ sala }: { sala: SalaPlanta }) {
 }
 
 // o tablet do controle da sala, com a tela acesa
-function Tablet({ sala }: { sala: SalaPlanta }) {
-    const { tablet } = sala;
+function Tablet({ tablet, titulo = "CONTROLE DA SALA" }: { tablet: SalaPlanta["tablet"]; titulo?: string }) {
     return (
         <group position={[tablet.x, tablet.y, tablet.z]} rotation={[0, tablet.rot, 0]}>
             <group rotation={[tablet.inclinacao, 0, 0]}>
@@ -444,7 +444,7 @@ function Tablet({ sala }: { sala: SalaPlanta }) {
                     position={[0, 0, 0.0075]}
                     largura={0.27}
                     linhas={[
-                        { texto: "CONTROLE DA SALA", tamanho: 30, cor: "#a78bfa", peso: 700 },
+                        { texto: titulo, tamanho: 30, cor: "#a78bfa", peso: 700 },
                         { texto: "TV  ·  Som  ·  Luzes", tamanho: 44, peso: 600 },
                         { texto: "YouTube junto", tamanho: 32, cor: "#b4b4bb", peso: 500 },
                     ]}
@@ -464,6 +464,10 @@ type Props = {
     salaDaCall: string | null;
     telasDaSala: TelaNaTV[];
     youtube: YoutubeNaTV | undefined;
+    // LAN house: o que aparece na segunda TV (lounge) e nos monitores (lugar ocupado -> quem senta e a tela dele)
+    telasDaSala2: TelaNaTV[];
+    youtube2: YoutubeNaTV | undefined;
+    monitores: Map<string, InfoMonitor> | null;
     // sala com a luz apagada agora (o anel do teto dela também apaga)
     salaEscura: string | null;
     // LEDs da sala da sua call (paleta, ciclo RGB, ligados), do controle da sala
@@ -474,7 +478,7 @@ type Props = {
     chat: LinhaChat[];
 };
 
-export function Predio({ planta, servidor, andar, pessoasPorSala, salaDaCall, telasDaSala, youtube, salaEscura, led, salaAtual, chat }: Props) {
+export function Predio({ planta, servidor, andar, pessoasPorSala, salaDaCall, telasDaSala, youtube, telasDaSala2, youtube2, monitores, salaEscura, led, salaAtual, chat }: Props) {
     const { hall, corredor, elevador, salas, quadros } = planta;
     const H = hall.z2;
     const canais = useMemo(() => new Map<string, Canal>(servidor.canais.map((c) => [c.id, c])), [servidor.canais]);
@@ -517,8 +521,10 @@ export function Predio({ planta, servidor, andar, pessoasPorSala, salaDaCall, te
         return lista;
     }, [corredor.z1]);
 
-    const salasGamer = useMemo(() => salas.filter((s) => s.modelo !== "CINEMA"), [salas]);
-    const salaDosLeds = salasGamer.find((s) => s.canalId === salaAtual) ?? null;
+    const salasGamer = useMemo(() => salas.filter((s) => s.modelo === "PADRAO"), [salas]);
+    const salasLan = useMemo(() => salas.filter((s) => s.modelo === "LANHOUSE"), [salas]);
+    // as luzes de verdade dos LEDs vão pra sala em que você está (gamer ou LAN house)
+    const salaDosLeds = [...salasGamer, ...salasLan].find((s) => s.canalId === salaAtual) ?? null;
 
     // LEDs do hall e do corredor: sanca (A) no alto das paredes, a luz dela lavando a parede,
     // e fita (B) no rodapé do corredor
@@ -670,6 +676,7 @@ export function Predio({ planta, servidor, andar, pessoasPorSala, salaDaCall, te
 
             {/* ---------- salas ---------- */}
             <SalasGamer salas={salasGamer} salaDaCall={salaDaCall} led={led} salaEscura={salaEscura} />
+            <SalasLanHouse salas={salasLan} salaDaCall={salaDaCall} led={led} salaEscura={salaEscura} monitores={monitores} />
             <LuzesSalaGamer sala={salaDosLeds} led={salaDosLeds?.canalId === salaDaCall ? led : null} apagada={!!salaDosLeds && salaDosLeds.canalId === salaEscura} />
             {salas.map((s) => {
                 const nome = canais.get(s.canalId)?.nome ?? "";
@@ -684,17 +691,30 @@ export function Predio({ planta, servidor, andar, pessoasPorSala, salaDaCall, te
                             telas={s.canalId === salaDaCall ? telasDaSala : SEM_TELAS}
                             youtube={s.canalId === salaDaCall ? youtube : undefined}
                             destaque={paleta.b}
+                            subtitulo={s.modelo === "LANHOUSE" ? "Telão da mesa LAN · ninguém compartilhando a tela" : undefined}
                         />
+                        {s.tv2 && (
+                            <TV
+                                sala={s}
+                                posicao={s.tv2}
+                                nome={nome}
+                                telas={s.canalId === salaDaCall ? telasDaSala2 : SEM_TELAS}
+                                youtube={s.canalId === salaDaCall ? youtube2 : undefined}
+                                destaque={paleta.b}
+                                subtitulo="TV do lounge · ninguém compartilhando a tela"
+                            />
+                        )}
                         {s.modelo === "CINEMA" ? (
                             <>
                                 <DecoracaoCinema sala={s} degraus={planta.degraus} />
                                 <LedsCinema sala={s} degraus={planta.degraus} led={ledDaSala} />
                             </>
-                        ) : (
+                        ) : s.modelo === "PADRAO" ? (
                             <Holograma sala={s} nomeSala={nome} mensagens={s.canalId === salaDaCall ? chat : null} led={ledDaSala} />
-                        )}
+                        ) : null /* LAN house: os LEDs e a decoração são da SalasLanHouse */}
                         <CaixasSom sala={s} />
-                        <Tablet sala={s} />
+                        <Tablet tablet={s.tablet} titulo={s.tablet2 ? "TELÃO · MESA LAN" : undefined} />
+                        {s.tablet2 && <Tablet tablet={s.tablet2} titulo="TV · LOUNGE" />}
                     </group>
                 );
             })}

@@ -5,7 +5,7 @@ export type Usuario = { id: string; nome: string; avatarUrl: string | null; entr
 export type Permissao = "ADMIN" | "MEMBRO";
 export type TipoCanal = "TEXTO" | "VOZ";
 // como a sala de voz é montada no mundo 3D
-export type ModeloSala = "PADRAO" | "CINEMA";
+export type ModeloSala = "PADRAO" | "CINEMA" | "LANHOUSE";
 // participantes: quem está na sala agora; telas: ids de quem está compartilhando a tela;
 // inicioCall: quando a chamada da sala começou (ISO), null se ninguém está nela (só em canais de voz)
 export type Canal = { id: string; nome: string; tipo: TipoCanal; modelo?: ModeloSala; participantes?: Usuario[]; telas?: string[]; inicioCall?: string | null };

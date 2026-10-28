@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { Clapperboard, Hash, Loader2, Sofa, Volume2 } from "lucide-react";
+import { Clapperboard, Hash, Loader2, Monitor, Sofa, Volume2 } from "lucide-react";
 import { api, mensagemDeErro, type Canal, type ModeloSala, type TipoCanal } from "../../api";
 import { Dialogo } from "../ui/Dialogo";
 
@@ -78,6 +78,13 @@ export function NovoCanal({ servidorId, tipoInicial, onFechar, onCriado }: Props
                                 icone={<Clapperboard size={20} />}
                                 titulo="Cinema"
                                 descricao="Telão, poltronas e luz que apaga no filme"
+                            />
+                            <OpcaoTipo
+                                ativo={modelo === "LANHOUSE"}
+                                onClick={() => setModelo("LANHOUSE")}
+                                icone={<Monitor size={20} />}
+                                titulo="LAN House"
+                                descricao="Mesa LAN com 10 PCs, lounge com TV e 20 lugares"
                             />
                         </div>
                     </div>
