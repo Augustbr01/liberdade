@@ -432,7 +432,7 @@ function Andar({
         ? { estado: youtube.estado, posicaoAgora: youtube.posicaoAgora, enviar: youtube.enviar, volume: volumeTV, mudo: surdo }
         : undefined;
 
-    // LAN house: a segunda TV (lounge) — por enquanto espelha a mesma escolha do tablet (tv2 não tem estado próprio no controle ainda)
+    // LAN house: a segunda TV (lounge) — escolha própria (tv2) no tablet
     const fonte2 = fonteDaTV(controle.estado, youtube.estado, midia.telasDaCall, 2);
     const telasDaSala2: TelaNaTV[] = (fonte2.tipo === "tela" ? [fonte2.tela] : fonte2.tipo === "mosaico" ? fonte2.telas : []).flatMap((t) =>
         t.publication.track ? [{ track: t.publication.track, nome: t.participant.isLocal ? "Você" : membros.get(t.participant.identity)?.nome ?? "Alguém" }] : []);

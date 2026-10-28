@@ -169,17 +169,27 @@ type SecaoTVProps = { estado: Estado; enviar: Enviar; telas: TrackReference[]; n
 
 function SecaoTV({ estado, enviar, telas, nome, grade = false }: SecaoTVProps) {
     const youtube = useYoutubeSala();
-    const tv = estado.tv ?? { modo: "AUTO", identidade: null };
+    // LAN house: duas TVs, cada uma com a sua escolha
+    const duas = !!estado.tv2;
+    const [alvo, setAlvo] = useState<1 | 2>(1);
+    const tv = (alvo === 2 ? estado.tv2 : estado.tv) ?? { modo: "AUTO", identidade: null };
     const video = youtube.estado?.video;
+    const env: Enviar = (cmd) => enviar(cmd.acao === "TV" || cmd.acao === "TV_TELA" ? { ...cmd, alvo } : cmd);
 
     return (
         <section>
+            {duas && (
+                <div className="controle-opcoes">
+                    <Opcao ativo={alvo === 1} onClick={() => setAlvo(1)} icone={<Tv size={18} />} titulo="TV da call" descricao="A TV principal (monitores)" />
+                    <Opcao ativo={alvo === 2} onClick={() => setAlvo(2)} icone={<Tv size={18} />} titulo="TV do lounge" descricao="A segunda TV, independente" />
+                </div>
+            )}
             {!grade && <span className="rotulo">Na TV</span>}
             <div className={grade ? "controle-grade" : "controle-opcoes"}>
                 <Opcao
                     cartao={grade}
                     ativo={tv.modo === "AUTO"}
-                    onClick={() => enviar({ acao: "TV", modo: "AUTO" })}
+                    onClick={() => env({ acao: "TV", modo: "AUTO" })}
                     icone={<Sparkles size={grade ? 26 : 18} />}
                     titulo="Automático"
                     descricao="O YouTube, ou a primeira tela compartilhada"
@@ -188,7 +198,7 @@ function SecaoTV({ estado, enviar, telas, nome, grade = false }: SecaoTVProps) {
                     cartao={grade}
                     ativo={tv.modo === "YOUTUBE"}
                     desligada={!video}
-                    onClick={() => enviar({ acao: "TV", modo: "YOUTUBE" })}
+                    onClick={() => env({ acao: "TV", modo: "YOUTUBE" })}
                     icone={<TvMinimalPlay size={grade ? 26 : 18} />}
                     titulo="YouTube junto"
                     descricao={video?.titulo ?? "Nada tocando (coloque um vídeo na aba YouTube)"}
@@ -197,7 +207,7 @@ function SecaoTV({ estado, enviar, telas, nome, grade = false }: SecaoTVProps) {
                     cartao={grade}
                     ativo={tv.modo === "MOSAICO"}
                     desligada={telas.length < 2}
-                    onClick={() => enviar({ acao: "TV", modo: "MOSAICO" })}
+                    onClick={() => env({ acao: "TV", modo: "MOSAICO" })}
                     icone={<LayoutGrid size={grade ? 26 : 18} />}
                     titulo="Mosaico"
                     descricao={telas.length < 2 ? "Todas as telas juntas (precisa de 2 ou mais)" : `As ${telas.length} telas compartilhadas ao mesmo tempo`}
@@ -208,7 +218,7 @@ function SecaoTV({ estado, enviar, telas, nome, grade = false }: SecaoTVProps) {
                         key={t.publication.trackSid}
                         cartao={grade}
                         ativo={tv.modo === "TELA" && tv.identidade === t.participant.identity}
-                        onClick={() => enviar({ acao: "TV_TELA", identidade: t.participant.identity })}
+                        onClick={() => env({ acao: "TV_TELA", identidade: t.participant.identity })}
                         icone={<MonitorUp size={grade ? 26 : 18} />}
                         previa={<VideoTrack trackRef={t} muted />}
                         titulo={t.participant.isLocal ? "Sua tela" : `Tela de ${nome(t.participant.identity)}`}
@@ -218,7 +228,7 @@ function SecaoTV({ estado, enviar, telas, nome, grade = false }: SecaoTVProps) {
                 <Opcao
                     cartao={grade}
                     ativo={tv.modo === "DESLIGADA"}
-                    onClick={() => enviar({ acao: "TV", modo: "DESLIGADA" })}
+                    onClick={() => env({ acao: "TV", modo: "DESLIGADA" })}
                     icone={<PowerOff size={grade ? 26 : 18} />}
                     titulo="Desligada"
                     descricao="Ninguém na TV (as telas continuam em cima das pessoas)"

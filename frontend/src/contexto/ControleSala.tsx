@@ -58,7 +58,7 @@ export type FonteTV = { tipo: "youtube" } | { tipo: "tela"; tela: TrackReference
 export function fonteDaTV(sala: EstadoSala | null, youtube: EstadoYoutube | null, telas: TrackReference[], alvo: 1 | 2 = 1): FonteTV {
     const temYoutube = !!youtube?.video;
     const telaDe = (id: string | null) => telas.find((t) => t.participant.identity === id && t.source === Track.Source.ScreenShare);
-    // alvo 2 = a segunda TV da LanHouse (sem estado dela ainda, é automática)
+    // alvo 2 = a segunda TV da LanHouse (estado próprio: tv2)
     const tv = (alvo === 2 ? sala?.tv2 : sala?.tv) ?? { modo: "AUTO" as const, identidade: null };
     const modo = tv.modo;
 
