@@ -7,10 +7,11 @@ type AvatarProps = {
     // "auto" deixa o CSS decidir o tamanho (blocos da chamada)
     tamanho?: number | "auto";
     falando?: boolean;
+    online?: boolean;
     className?: string;
 };
 
-export function Avatar({ nome, url, tamanho = 32, falando, className = "" }: AvatarProps) {
+export function Avatar({ nome, url, tamanho = 32, falando, online, className = "" }: AvatarProps) {
     const [falhou, setFalhou] = useState(false);
     const imagem = avatarReal(url);
 
@@ -21,7 +22,7 @@ export function Avatar({ nome, url, tamanho = 32, falando, className = "" }: Ava
         : { width: tamanho, height: tamanho, fontSize: Math.max(10, Math.round(tamanho * 0.38)) };
 
     return (
-        <span className={`avatar ${falando ? "falando" : ""} ${className}`} style={estilo}>
+        <span className={`avatar ${falando ? "falando" : ""} ${online ? "online" : ""} ${className}`} style={estilo}>
             {imagem && !falhou ? (
                 <img src={imagem} alt="" draggable={false} onError={() => setFalhou(true)} />
             ) : (

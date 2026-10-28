@@ -98,7 +98,11 @@ export type EventoGateway =
     | { tipo: "YT_ESTADO"; agora: number; estado: EstadoYoutube }
     | { tipo: "YT_ERRO"; canalId: string; mensagem: string }
     | { tipo: "SALA_ESTADO"; estado: EstadoSala }
-    | { tipo: "SALA_ERRO"; canalId: string; mensagem: string };
+    | { tipo: "SALA_ERRO"; canalId: string; mensagem: string }
+    // snapshot ao (re)conectar: ids online entre quem compartilha servidor com você (sem você)
+    | { tipo: "PRESENCA_INICIAL"; online: string[] }
+    // alguém ficou online ou offline (delay de 5s depois da última aba fechar)
+    | { tipo: "PRESENCA"; usuarioId: string; status: "ONLINE" | "OFFLINE" };
 
 // o que o CLIENTE manda pelo WebSocket (entrada). O servidor carimba a identidade
 // (usuarioId) a partir do socket — o cliente só diz "onde".

@@ -12,6 +12,7 @@ import fastifyWebsocket from "@fastify/websocket"
 import { RotasServidor } from "./routes/Servidor"
 import { routeWebSocket } from "./routes/WebSocketMain"
 import { routeHook } from "./routes/WebHook"
+import { iniciarHeartbeat } from "./routes/eventosConexao"
 import { iniciarSincronizacaoCalls } from "./sincronizarCalls"
 import { canaisComGente } from "./eventosCall"
 import { imagemRotas } from "./routes/Imagem"
@@ -99,6 +100,8 @@ app.listen({port:3000, host: process.env.HOST ?? "localhost"}, (error) => {
     console.log("ligou");
     // quem está em cada call: confere com o LiveKit de tempos em tempos (não depende só do webhook)
     iniciarSincronizacaoCalls(canaisComGente);
+    // ping/pong dos WebSockets (derruba conexões mortas e mantém a presença certa)
+    iniciarHeartbeat();
     if(error) {
         console.log(error);
     }

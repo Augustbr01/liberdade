@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { conectar, publicarParaServidor, publicarParaUsuarios } from "./eventosConexao";
+import { conectar, enviarSnapshot, marcarVivo, publicarParaServidor} from "./eventosConexao";
 import { buscarServidor } from "../config/CacheTyping";
 import { entrarNoAndar, lerPose, moverNoAndar, sairDoAndar } from "../mundo";
 import { aplicarComando, estadoYoutube, lerComando } from "../youtube";
@@ -31,6 +31,16 @@ export const routeWebSocket : (FastifyPluginAsync) = async (fastify) => {
             if(andar) sairDoAndar(andar,req.user.id,socket);
             andar = null;
         })
+
+        socket.on("pong", () => {
+            marcarVivo(socket);
+        })
+
+        try {
+            await enviarSnapshot(req.user.id,socket);
+        }catch(e) {
+            console.log("erro grave");
+        }
 
         socket.on("message", async (raw) => {
             try {

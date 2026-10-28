@@ -12,6 +12,7 @@ import { GerenciadorCall, type Destino, type MotivoPerda } from "./lib/gerenciad
 import { ControleVozProvider } from "./contexto/ControleVoz";
 import { FocoChamadaProvider } from "./contexto/FocoChamada";
 import { PerfilProvider } from "./contexto/Perfil";
+import { PresencaProvider } from "./contexto/Presenca";
 import { ToastProvider, useToast } from "./contexto/Toasts";
 import { YoutubeSalaProvider } from "./contexto/YoutubeSala";
 import { ControleSalaProvider } from "./contexto/ControleSala";
@@ -792,6 +793,7 @@ function Aplicacao() {
             >
                 {/* "Desmute o microfone para falar" (falou mutado numa call) */}
                 <AvisoMutado />
+                <PresencaProvider euId={eu.id}>
                 <ChatSalaProvider desde={voz?.desde ?? null}>
                     <FocoChamadaProvider desde={voz?.desde ?? null}>
                         <PerfilProvider
@@ -925,6 +927,7 @@ function Aplicacao() {
                         </PerfilProvider>
                     </FocoChamadaProvider>
                 </ChatSalaProvider>
+                </PresencaProvider>
             </ControleVozProvider>
         </LiveKitRoom>
     );
