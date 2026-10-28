@@ -59,7 +59,8 @@ function molduras(planta: Planta, it: Interativo): Moldura[] {
         return q ? [{ pos: [q.x, 1.65, q.z], rot: q.rot, inclinacao: 0, largura: 2.26, altura: 1.5, frente: 0.07 }] : [];
     }
     if (it.tipo === "tablet") {
-        const t = planta.salas.find((s) => s.canalId === it.canalId)?.tablet;
+        const sl = planta.salas.find((s) => s.canalId === it.canalId);
+        const t = it.alvo === 2 ? sl?.tablet2 : sl?.tablet;
         return t ? [{ pos: [t.x, t.y, t.z], rot: t.rot, inclinacao: t.inclinacao, largura: 0.4, altura: 0.3, frente: 0.012 }] : [];
     }
     if (it.tipo === "chat") {

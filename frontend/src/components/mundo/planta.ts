@@ -581,7 +581,8 @@ export const LAN = {
     interruptor: { x: 0.9, y: 1.3 },
     tv1: { x: -4, y: 1.98, largura: 4.0 },
     tv2: { x: 4, y: 1.72, largura: 3.6 },
-    pedestal: { x: -4, z: 2.85 },
+    // no corredor entre a mesa LAN e o lounge (no vão da ponta da mesa ele travava a passagem)
+    pedestal: { x: -1.5, z: 2.1 },
     balcao: { x: -5.6, z: 3.55 },
     geladeira: { x: -7.45, z: 3.55 },
 } as const;

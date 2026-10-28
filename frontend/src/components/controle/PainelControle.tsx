@@ -28,6 +28,8 @@ type Props = {
     formato?: "painel" | "tablet";
     // tablet: fechou no X e está esperando o mouse voltar pro jogo
     voltando?: boolean;
+    // 3D: qual TV este tablet controla (o da mesa LAN = 1, o do lounge = 2)
+    alvoTV?: 1 | 2;
     onFechar: () => void;
 };
 
@@ -89,7 +91,7 @@ const ABAS_TABLET: { id: AbaTablet; nome: string; descricao: string; icone: Reac
     { id: "youtube", nome: "YouTube", descricao: "Assistir junto, no mesmo ponto do vídeo", icone: <TvMinimalPlay size={20} /> },
 ];
 
-function Tablet({ membros, eu, telas, abaInicial = "controle", aviso, voltando = false, onFechar }: Props) {
+function Tablet({ membros, eu, telas, abaInicial = "controle", aviso, voltando = false, alvoTV, onFechar }: Props) {
     const { estado, enviar } = useControleSala();
     const [aba, setAba] = useState<AbaTablet>(abaInicial === "youtube" ? "youtube" : "tv");
     const nome = useNome(membros, eu);
@@ -144,7 +146,7 @@ function Tablet({ membros, eu, telas, abaInicial = "controle", aviso, voltando =
                     <p className="chat-sala-vazio">Carregando…</p>
                 ) : (
                     <div className="tablet-corpo">
-                        {aba === "tv" && <SecaoTV estado={estado} enviar={enviar} telas={telas} nome={nome} grade />}
+                        {aba === "tv" && <SecaoTV estado={estado} enviar={enviar} telas={telas} nome={nome} grade {...(alvoTV ? { alvoFixo: alvoTV } : {})} />}
                         {aba === "som" && <SecaoSom estado={estado} enviar={enviar} grande />}
                         {aba === "luzes" && (
                             <div className="tablet-colunas">
@@ -165,25 +167,27 @@ function useNome(membros: MapaMembros, eu: Usuario) {
 
 // ---------- as funções (iguais no painel e no tablet; o tablet só arruma diferente) ----------
 
-type SecaoTVProps = { estado: Estado; enviar: Enviar; telas: TrackReference[]; nome: (id: string) => string; grade?: boolean };
+type SecaoTVProps = { estado: Estado; enviar: Enviar; telas: TrackReference[]; nome: (id: string) => string; grade?: boolean; alvoFixo?: 1 | 2 };
 
-function SecaoTV({ estado, enviar, telas, nome, grade = false }: SecaoTVProps) {
+function SecaoTV({ estado, enviar, telas, nome, grade = false, alvoFixo }: SecaoTVProps) {
     const youtube = useYoutubeSala();
     // LAN house: duas TVs, cada uma com a sua escolha
     const duas = !!estado.tv2;
-    const [alvo, setAlvo] = useState<1 | 2>(1);
+    const [alvoEscolhido, setAlvo] = useState<1 | 2>(1);
+    const alvo = alvoFixo ?? alvoEscolhido;
     const tv = (alvo === 2 ? estado.tv2 : estado.tv) ?? { modo: "AUTO", identidade: null };
     const video = youtube.estado?.video;
     const env: Enviar = (cmd) => enviar(cmd.acao === "TV" || cmd.acao === "TV_TELA" ? { ...cmd, alvo } : cmd);
 
     return (
         <section>
-            {duas && (
+            {duas && !alvoFixo && (
                 <div className="controle-opcoes">
                     <Opcao ativo={alvo === 1} onClick={() => setAlvo(1)} icone={<Tv size={18} />} titulo="TV da call" descricao="A TV principal (monitores)" />
                     <Opcao ativo={alvo === 2} onClick={() => setAlvo(2)} icone={<Tv size={18} />} titulo="TV do lounge" descricao="A segunda TV, independente" />
                 </div>
             )}
+            {alvoFixo && <span className="rotulo">{alvoFixo === 2 ? "TV do lounge" : "Telão da mesa LAN"}</span>}
             {!grade && <span className="rotulo">Na TV</span>}
             <div className={grade ? "controle-grade" : "controle-opcoes"}>
                 <Opcao

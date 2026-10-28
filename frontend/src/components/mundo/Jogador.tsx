@@ -766,7 +766,8 @@ export function Jogador({ planta, pose, parado, portaFechada, toque, pedido, vel
     // a mira passa perto do tablet desta sala? (uma bola em volta dele: o tablet é pequeno e
     // mirar no retângulo exato seria chato)
     function miraNoTablet(it: Interativo, p: Ponto, yaw: number, pitch: number, olhosY: number) {
-        const tb = planta.salas.find((s) => s.canalId === it.canalId)?.tablet;
+        const sl = planta.salas.find((s) => s.canalId === it.canalId);
+        const tb = it.alvo === 2 ? sl?.tablet2 : sl?.tablet;
         if (!tb) return false;
         const dx = -Math.sin(yaw) * Math.cos(pitch);
         const dy = Math.sin(pitch);

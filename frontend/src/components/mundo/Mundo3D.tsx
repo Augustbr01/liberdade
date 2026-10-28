@@ -202,6 +202,8 @@ function Andar({
     // o controle da sala (tablet), aberto na aba Controle ou YouTube. Aberto = tablet na mão
     // (os outros veem o seu boneco segurando)
     const [controleAberto, setControleAberto] = useState<"controle" | "youtube" | null>(null);
+    // LAN house: qual dos dois tablets está na mão (1 = telão da mesa LAN, 2 = TV do lounge)
+    const [alvoTablet, setAlvoTablet] = useState<1 | 2 | undefined>(undefined);
     useEffect(() => {
         pose.current.item = controleAberto ? ITEM.TABLET : ITEM.NADA;
     }, [controleAberto]);
@@ -440,37 +442,21 @@ function Andar({
         ? { estado: youtube.estado, posicaoAgora: youtube.posicaoAgora, enviar: youtube.enviar, volume: volumeTV, mudo: surdo }
         : undefined;
 
-    // monitores da LAN house: cada assento ocupado -> quem está sentado e a tela dele (só na sala da sua call)
+    // monitores da LAN house: quem está sentado num setup da mesa mostra a PRÓPRIA tela compartilhada
+    // no monitor daquele lugar (você incluso; sem compartilhar, o monitor mostra o nome)
     const monitores = new Map<string, InfoMonitor>();
-    if (salaDaCall) {
-        const canal = canais.get(salaDaCall.canalId);
-        if (canal && canal.modelo === "LANHOUSE") {
-            // quem está no 3D sentado nessa sala
-            for (const [id, p] of posicoes) {
-                const assento = planta.assentos.find((a) => a.salaId === salaDaCall.canalId && Math.hypot(a.x - p.x, a.z - p.z) < 0.35);
-                if (assento && assento.id.startsWith(salaDaCall.canalId + ":lan:")) {
-                    const participante = remotosPorId.get(id);
-                    const telaPub = participante?.getTrackPublication(Track.Source.ScreenShare);
-                    const tela = telaPub?.track;
-                    monitores.set(assento.id, { nome: participante?.name ?? "Alguém", track: tela });
-                }
-            }
-            // quem está pelo modo clássico na sala (fora do 3D)
-            const participantes = (canais.get(salaDaCall.canalId)?.participantes ?? []).filter((p) => p.id !== eu.id && !pessoas.some((pp) => pp.usuario.id === p.id));
-            const ocupados = new Set<string>();
-            for (const p of pessoas) {
-                if (p.lerAlvo()?.postura === 1) { // POSTURA.SENTADO
-                    const alvo = p.lerAlvo(); const a = alvo ? planta.assentos.find((q) => Math.hypot(q.x - alvo.x, q.z - alvo.z) < 0.35) : null;
-                    if (a) ocupados.add(a.id);
-                }
-            }
-            const livres = planta.assentos.filter((a) => a.salaId === salaDaCall.canalId && !ocupados.has(a.id));
-            participantes.forEach((usuario, i) => {
-                const assento = livres[i];
-                if (assento && usuario) {
-                    monitores.set(assento.id, { nome: usuario.nome, track: undefined });
-                }
-            });
+    if (salaDaCall?.modelo === "LANHOUSE") {
+        const prefixo = salaDaCall.canalId + ":lan:";
+        const telaLocal = midia.telasDaCall.find((t) => t.participant.isLocal)?.publication.track;
+        const sentarNoSetup = (p: Pose, info: InfoMonitor) => {
+            if (p.postura !== POSTURA.SENTADO) return;
+            const a = salaDaCall.assentos.find((q) => q.id.startsWith(prefixo) && Math.hypot(q.x - p.x, q.z - p.z) < 0.35);
+            if (a) monitores.set(a.id, info);
+        };
+        sentarNoSetup(pose.current, { nome: "Você", track: telaLocal });
+        for (const pe of pessoas) {
+            const alvo = pe.lerAlvo();
+            if (alvo) sentarNoSetup(alvo, { nome: pe.usuario.nome, track: pe.telas[0] });
         }
     }
 
@@ -576,6 +562,7 @@ function Andar({
             soltarMouse();
             setChatId(null);
             setChatCallAberto(false);
+            setAlvoTablet(foco.alvo);
             setControleAberto("controle");
         } else if (foco?.tipo === "assento") {
             const assento = assentosPorId.get(foco.assentoId ?? "");
@@ -595,6 +582,9 @@ function Andar({
         soltarMouse();
         setChatId(null);
         setChatCallAberto(false);
+        // T sem mirar: na LAN house pega o tablet mais perto de você
+        const sl = planta.salas.find((s) => s.canalId === vozNoAndar);
+        setAlvoTablet(sl?.tablet2 && Math.hypot(sl.tablet2.x - pose.current.x, sl.tablet2.z - pose.current.z) < Math.hypot(sl.tablet.x - pose.current.x, sl.tablet.z - pose.current.z) ? 2 : sl?.tablet2 ? 1 : undefined);
         setControleAberto("controle");
     };
     acoes.current.f = () => {
@@ -839,7 +829,8 @@ function Andar({
                 <div className="mundo-tablet">
                     <div className="mundo-tablet-tela">
                         <PainelControle
-                            key={controleAberto}
+                            key={controleAberto + String(alvoTablet)}
+                            {...(alvoTablet ? { alvoTV: alvoTablet } : {})}
                             membros={membros}
                             eu={eu}
                             telas={midia.telasDaCall}
