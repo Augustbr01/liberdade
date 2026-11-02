@@ -7,6 +7,7 @@ import type { Track } from "livekit-client";
 import type { Canal, ServidorDetalhe } from "../../api";
 import type { ComandoYoutube, EstadoLed, EstadoYoutube } from "../../tipos";
 import { PlayerYoutube } from "../youtube/PlayerYoutube";
+import { QuadroLink } from "../link/QuadroLink";
 import { useTexturaVideo } from "./midia";
 import { material, Moveis } from "./Moveis";
 import { PALETAS, paletaDaSala } from "./paletas";
@@ -232,7 +233,7 @@ export type TelaNaTV = { track: Track; nome: string };
 // TV da sala (ou o telão do cinema): o YouTube junto, a tela compartilhada da call em que
 // você está (ou várias, em mosaico), ou o nome da sala
 // destaque: a cor B dos LEDs da sala (o "CINEMA" do telão)
-function TV({ sala, nome, telas, youtube, destaque, posicao, subtitulo }: { sala: SalaPlanta; nome: string; telas: TelaNaTV[]; youtube: YoutubeNaTV | undefined; destaque: string; posicao?: SalaPlanta["tv"]; subtitulo?: string }) {
+function TV({ sala, nome, telas, youtube, link, destaque, posicao, subtitulo }: { sala: SalaPlanta; nome: string; telas: TelaNaTV[]; youtube: YoutubeNaTV | undefined; link?: string | undefined; destaque: string; posicao?: SalaPlanta["tv"]; subtitulo?: string }) {
     const cinema = sala.modelo === "CINEMA";
     const tv = posicao ?? sala.tv;
     const video = useTexturaVideo(telas.length === 1 ? telas[0]!.track : undefined, cinema ? 1920 : 1280, cinema ? 1080 : 720);
@@ -267,6 +268,13 @@ function TV({ sala, nome, telas, youtube, destaque, posicao, subtitulo }: { sala
                             mudo={youtube.mudo}
                             clicavel={false}
                         />
+                    </div>
+                </Html>
+            ) : link ? (
+                // um site qualquer: mesmo truque do YouTube (iframe atrás do canvas, só pra ver)
+                <Html transform occlude="blending" portal={portal} position={[0, 0, 0.05]} distanceFactor={(L / PX_YOUTUBE) * 400}>
+                    <div className="link-tv" style={{ width: PX_YOUTUBE, height: (PX_YOUTUBE * 9) / 16 }}>
+                        <QuadroLink url={link} clicavel={false} />
                     </div>
                 </Html>
             ) : telas.length > 1 ? (
@@ -467,6 +475,9 @@ type Props = {
     // LAN house: o que aparece na segunda TV (lounge) e nos monitores (lugar ocupado -> quem senta e a tela dele)
     telasDaSala2: TelaNaTV[];
     youtube2: YoutubeNaTV | undefined;
+    // site aberto na TV (e na TV do lounge) pelo tablet
+    link: string | undefined;
+    link2: string | undefined;
     monitores: Map<string, InfoMonitor> | null;
     // sala com a luz apagada agora (o anel do teto dela também apaga)
     salaEscura: string | null;
@@ -478,7 +489,7 @@ type Props = {
     chat: LinhaChat[];
 };
 
-export function Predio({ planta, servidor, andar, pessoasPorSala, salaDaCall, telasDaSala, youtube, telasDaSala2, youtube2, monitores, salaEscura, led, salaAtual, chat }: Props) {
+export function Predio({ planta, servidor, andar, pessoasPorSala, salaDaCall, telasDaSala, youtube, telasDaSala2, youtube2, link, link2, monitores, salaEscura, led, salaAtual, chat }: Props) {
     const { hall, corredor, elevador, salas, quadros } = planta;
     const H = hall.z2;
     const canais = useMemo(() => new Map<string, Canal>(servidor.canais.map((c) => [c.id, c])), [servidor.canais]);
@@ -690,6 +701,7 @@ export function Predio({ planta, servidor, andar, pessoasPorSala, salaDaCall, te
                             nome={nome}
                             telas={s.canalId === salaDaCall ? telasDaSala : SEM_TELAS}
                             youtube={s.canalId === salaDaCall ? youtube : undefined}
+                            link={s.canalId === salaDaCall ? link : undefined}
                             destaque={paleta.b}
                             subtitulo={s.modelo === "LANHOUSE" ? "Telão da mesa LAN · ninguém compartilhando a tela" : undefined}
                         />
@@ -700,6 +712,7 @@ export function Predio({ planta, servidor, andar, pessoasPorSala, salaDaCall, te
                                 nome={nome}
                                 telas={s.canalId === salaDaCall ? telasDaSala2 : SEM_TELAS}
                                 youtube={s.canalId === salaDaCall ? youtube2 : undefined}
+                                link={s.canalId === salaDaCall ? link2 : undefined}
                                 destaque={paleta.b}
                                 subtitulo="TV do lounge · ninguém compartilhando a tela"
                             />

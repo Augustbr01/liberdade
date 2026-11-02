@@ -36,7 +36,8 @@ export type EstadoYoutube = {
 }
 
 // controle da sala (o "tablet"): o que aparece na TV, volume e surround da TV, e as luzes
-export type ModoTV = "AUTO" | "YOUTUBE" | "TELA" | "MOSAICO" | "DESLIGADA"
+// LINK: um site qualquer aberto na TV (iframe); `url` guarda o endereço
+export type ModoTV = "AUTO" | "YOUTUBE" | "TELA" | "MOSAICO" | "DESLIGADA" | "LINK"
 export type ModoLuzes = "AUTO" | "ACESAS" | "APAGADAS"
 // LEDs da sala gamer. paleta null = a cor padrão da sala (cada sala tem a sua)
 export type PaletaLed = "NEON" | "BRASA" | "AURORA" | "SAKURA" | "MONO"
@@ -44,9 +45,9 @@ export type EstadoLed = { paleta: PaletaLed | null; ciclo: boolean; ligado: bool
 export type EstadoSala = {
     canalId: string;
     // TELA: a tela compartilhada de `identidade` (usuarioId)
-    tv: { modo: ModoTV; identidade: string | null };
+    tv: { modo: ModoTV; identidade: string | null; url: string | null };
     // segunda TV (lounge da LanHouse): mesmo formato; salas de uma TV só nunca mexem nela
-    tv2: { modo: ModoTV; identidade: string | null };
+    tv2: { modo: ModoTV; identidade: string | null; url: string | null };
     volume: number;
     surround: boolean;
     luzes: ModoLuzes;

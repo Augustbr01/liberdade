@@ -68,6 +68,9 @@ type Props = {
     // LAN house: o que aparece na segunda TV (lounge) e nos monitores (lugar ocupado -> quem senta e a tela dele)
     telasDaSala2: TelaNaTV[];
     youtube2: YoutubeNaTV | undefined;
+    // site aberto na TV / na TV do lounge (pelo tablet)
+    link: string | undefined;
+    link2: string | undefined;
     monitores: Map<string, InfoMonitor> | null;
     // chat da sua call, pro holograma da sala
     chat: LinhaChat[];
@@ -185,6 +188,8 @@ export function Cena(props: Props) {
                     youtube={props.youtube}
                     telasDaSala2={props.telasDaSala2}
                     youtube2={props.youtube2}
+                    link={props.link}
+                    link2={props.link2}
                     monitores={props.monitores}
                     salaEscura={props.escuro ? props.salaDaCall : null}
                     led={props.led}

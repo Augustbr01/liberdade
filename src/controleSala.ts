@@ -7,12 +7,39 @@ const salas = new Map<string, EstadoSala>();
 export type ComandoSala =
     | { acao: "TV"; modo: "AUTO" | "YOUTUBE" | "MOSAICO" | "DESLIGADA"; alvo: 1 | 2 }
     | { acao: "TV_TELA"; identidade: string; alvo: 1 | 2 }
+    | { acao: "TV_LINK"; url: string; alvo: 1 | 2 }
     | { acao: "VOLUME"; volume: number }
     | { acao: "SURROUND"; ligado: boolean }
     | { acao: "LUZES"; modo: ModoLuzes }
     | { acao: "LED"; paleta?: PaletaLed; ciclo?: boolean; ligado?: boolean };
 
 const MODOS_TV = ["AUTO", "YOUTUBE", "MOSAICO", "DESLIGADA"];
+
+// o que alguém digitou no tablet vira um endereço http(s) válido, ou null.
+// Aceita "exemplo.com/pagina" (sem esquema) e sobe http pra https (o site é https: o navegador
+// bloqueia iframe http). Sem usuário/senha no endereço e sem esquemas como javascript: ou data:
+export function normalizarLink(bruto: unknown): string | null {
+    if (typeof bruto !== "string") return null;
+    let texto = bruto.trim();
+    if (!texto || texto.length > 2000 || /\s/.test(texto)) return null;
+    if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(texto)) {
+        // "javascript:alert(1)", "data:..." etc. têm ":" mas não "//": só aceita host:porta
+        if (/^[a-z][a-z0-9+.-]*:/i.test(texto) && !/^[^/:]+:\d+(\/|$)/.test(texto)) return null;
+        texto = `https://${texto}`;
+    }
+    let url: URL;
+    try {
+        url = new URL(texto);
+    } catch {
+        return null;
+    }
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    if (url.username || url.password) return null;
+    // precisa parecer um site de verdade (exemplo.com), não "localhost" nem só uma palavra
+    if (!url.hostname.includes(".") && !url.hostname.startsWith("[")) return null;
+    url.protocol = "https:";
+    return url.toString().slice(0, 2000);
+}
 const MODOS_LUZES = ["AUTO", "ACESAS", "APAGADAS"];
 const PALETAS = ["NEON", "BRASA", "AURORA", "SAKURA", "MONO"];
 
@@ -25,6 +52,10 @@ export function lerComandoSala(msg: any): ComandoSala | null {
             return MODOS_TV.includes(msg.modo) ? { acao: "TV", modo: msg.modo, alvo } : null;
         case "TV_TELA":
             return typeof msg.identidade === "string" && msg.identidade.length <= 64 ? { acao: "TV_TELA", identidade: msg.identidade, alvo } : null;
+        case "TV_LINK": {
+            const url = normalizarLink(msg.url);
+            return url ? { acao: "TV_LINK", url, alvo } : null;
+        }
         case "VOLUME":
             return typeof msg.volume === "number" && Number.isFinite(msg.volume) ? { acao: "VOLUME", volume: Math.round(Math.max(0, Math.min(100, msg.volume))) } : null;
         case "SURROUND":
@@ -54,7 +85,7 @@ export function lerComandoSala(msg: any): ComandoSala | null {
 }
 
 function padrao(canalId: string): EstadoSala {
-    return { canalId, tv: { modo: "AUTO", identidade: null }, tv2: { modo: "AUTO", identidade: null }, volume: 80, surround: true, luzes: "AUTO", led: { paleta: null, ciclo: false, ligado: true }, ultima: null };
+    return { canalId, tv: { modo: "AUTO", identidade: null, url: null }, tv2: { modo: "AUTO", identidade: null, url: null }, volume: 80, surround: true, luzes: "AUTO", led: { paleta: null, ciclo: false, ligado: true }, ultima: null };
 }
 
 export function estadoSala(canalId: string) {
@@ -63,8 +94,9 @@ export function estadoSala(canalId: string) {
 
 export function aplicarComandoSala(canalId: string, usuarioId: string, cmd: ComandoSala): EstadoSala {
     const e = salas.get(canalId) ?? padrao(canalId);
-    if (cmd.acao === "TV") e[cmd.alvo === 2 ? "tv2" : "tv"] = { modo: cmd.modo, identidade: null };
-    if (cmd.acao === "TV_TELA") e[cmd.alvo === 2 ? "tv2" : "tv"] = { modo: "TELA", identidade: cmd.identidade };
+    if (cmd.acao === "TV") e[cmd.alvo === 2 ? "tv2" : "tv"] = { modo: cmd.modo, identidade: null, url: null };
+    if (cmd.acao === "TV_TELA") e[cmd.alvo === 2 ? "tv2" : "tv"] = { modo: "TELA", identidade: cmd.identidade, url: null };
+    if (cmd.acao === "TV_LINK") e[cmd.alvo === 2 ? "tv2" : "tv"] = { modo: "LINK", identidade: null, url: cmd.url };
     if (cmd.acao === "VOLUME") e.volume = cmd.volume;
     if (cmd.acao === "SURROUND") e.surround = cmd.ligado;
     if (cmd.acao === "LUZES") e.luzes = cmd.modo;

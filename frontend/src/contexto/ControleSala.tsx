@@ -51,7 +51,7 @@ export function useControleSala() {
     return valor;
 }
 
-export type FonteTV = { tipo: "youtube" } | { tipo: "tela"; tela: TrackReference } | { tipo: "mosaico"; telas: TrackReference[] } | { tipo: "nada" };
+export type FonteTV = { tipo: "youtube" } | { tipo: "tela"; tela: TrackReference } | { tipo: "mosaico"; telas: TrackReference[] } | { tipo: "link"; url: string } | { tipo: "nada" };
 
 // o que aparece na TV da sala (e no destaque do modo clássico), pelo que escolheram no tablet.
 // Se a escolha não existe mais (a pessoa parou de compartilhar, o vídeo acabou), volta pro automático
@@ -63,6 +63,8 @@ export function fonteDaTV(sala: EstadoSala | null, youtube: EstadoYoutube | null
     const modo = tv.modo;
 
     if (modo === "DESLIGADA") return { tipo: "nada" };
+    // um site aberto pelo tablet. Sem endereço (estado quebrado) cai no automático
+    if (modo === "LINK" && tv.url) return { tipo: "link", url: tv.url };
     // mosaico com uma tela só é a tela inteira; sem nenhuma, cai no automático
     if (modo === "MOSAICO") {
         const todas = telas.filter((t) => t.source === Track.Source.ScreenShare);

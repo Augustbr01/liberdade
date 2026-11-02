@@ -434,6 +434,9 @@ function Andar({
         ? { estado: youtube.estado, posicaoAgora: youtube.posicaoAgora, enviar: youtube.enviar, volume: volumeTV, mudo: surdo }
         : undefined;
 
+    // site aberto na TV pelo tablet (só aparece na TV da sala da sua call)
+    const linkNaTV = salaDaCall && fonte.tipo === "link" ? fonte.url : undefined;
+
     // LAN house: a segunda TV (lounge) — escolha própria (tv2) no tablet
     const fonte2 = fonteDaTV(controle.estado, youtube.estado, midia.telasDaCall, 2);
     const telasDaSala2: TelaNaTV[] = (fonte2.tipo === "tela" ? [fonte2.tela] : fonte2.tipo === "mosaico" ? fonte2.telas : []).flatMap((t) =>
@@ -441,6 +444,8 @@ function Andar({
     const youtubeNaTV2: YoutubeNaTV | undefined = salaDaCall && fonte2.tipo === "youtube" && youtube.estado?.video
         ? { estado: youtube.estado, posicaoAgora: youtube.posicaoAgora, enviar: youtube.enviar, volume: volumeTV, mudo: surdo }
         : undefined;
+
+    const linkNaTV2 = salaDaCall && fonte2.tipo === "link" ? fonte2.url : undefined;
 
     // monitores da LAN house: quem está sentado num setup da mesa mostra a PRÓPRIA tela compartilhada
     // no monitor daquele lugar (você incluso; sem compartilhar, o monitor mostra o nome)
@@ -677,6 +682,8 @@ function Andar({
                     youtube={youtubeNaTV}
                     telasDaSala2={telasDaSala2}
                     youtube2={youtubeNaTV2}
+                    link={linkNaTV}
+                    link2={linkNaTV2}
                     monitores={monitores}
                     portaAberta={portaAberta}
                     portaFechada={portaFechada}

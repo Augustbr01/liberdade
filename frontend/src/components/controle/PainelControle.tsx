@@ -1,11 +1,12 @@
-import { useState, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { VideoTrack, type TrackReference } from "@livekit/components-react";
-import { LayoutGrid, Lightbulb, LightbulbOff, Loader2, MonitorUp, PowerOff, Sparkles, SunDim, Tv, TvMinimalPlay, Volume1, Volume2, X } from "lucide-react";
+import { LayoutGrid, Lightbulb, LightbulbOff, ExternalLink, Globe, Loader2, MonitorUp, PowerOff, Sparkles, SunDim, Tv, TvMinimalPlay, Volume1, Volume2, X } from "lucide-react";
 import type { Usuario } from "../../api";
 import { useControleSala } from "../../contexto/ControleSala";
 import { useYoutubeSala } from "../../contexto/YoutubeSala";
 import type { MapaMembros, ModoLuzes } from "../../tipos";
 import { PainelYoutube } from "../youtube/PainelYoutube";
+import { nomeDoSite, normalizarLink, provavelmenteBloqueia } from "../../lib/link";
 import { LED_PADRAO, ORDEM_PALETAS, PALETAS } from "../mundo/paletas";
 
 type Aba = "controle" | "youtube";
@@ -209,6 +210,15 @@ function SecaoTV({ estado, enviar, telas, nome, grade = false, alvoFixo }: Secao
                 />
                 <Opcao
                     cartao={grade}
+                    ativo={tv.modo === "LINK"}
+                    desligada={!tv.url}
+                    onClick={() => tv.url && env({ acao: "TV_LINK", url: tv.url })}
+                    icone={<Globe size={grade ? 26 : 18} />}
+                    titulo="Site"
+                    descricao={tv.url ? nomeDoSite(tv.url) : "Nada aberto (cole um link abaixo)"}
+                />
+                <Opcao
+                    cartao={grade}
                     ativo={tv.modo === "MOSAICO"}
                     desligada={telas.length < 2}
                     onClick={() => env({ acao: "TV", modo: "MOSAICO" })}
@@ -241,7 +251,62 @@ function SecaoTV({ estado, enviar, telas, nome, grade = false, alvoFixo }: Secao
             {telas.length === 0 && (
                 <small className="texto-fraco">Quando alguém da call compartilhar a tela, ela aparece aqui pra ir pra TV.</small>
             )}
+            <FormLink atual={tv.modo === "LINK" ? tv.url ?? null : null} onAbrir={(url) => env({ acao: "TV_LINK", url })} />
         </section>
+    );
+}
+
+// cola um link e ele abre na TV, pra todo mundo da call
+function FormLink({ atual, onAbrir }: { atual: string | null; onAbrir: (url: string) => void }) {
+    const [texto, setTexto] = useState("");
+    const [erro, setErro] = useState(false);
+    const url = normalizarLink(texto);
+
+    const enviar = (e: FormEvent) => {
+        e.preventDefault();
+        if (!url) {
+            setErro(true);
+            return;
+        }
+        onAbrir(url);
+        setTexto("");
+        setErro(false);
+    };
+
+    return (
+        <form className="controle-link" onSubmit={enviar}>
+            <span className="rotulo">Abrir um site na TV</span>
+            <div className="controle-link-linha">
+                <input
+                    className="campo"
+                    type="text"
+                    inputMode="url"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    placeholder="Cole um link (ex.: wikipedia.org)"
+                    value={texto}
+                    onChange={(e) => {
+                        setTexto(e.target.value);
+                        setErro(false);
+                    }}
+                    aria-label="Endereço do site"
+                    aria-invalid={erro}
+                />
+                <button type="submit" className="botao botao-pequeno botao-primario" disabled={!texto.trim()}>
+                    Abrir
+                </button>
+            </div>
+            {erro && <small className="texto-erro">Esse endereço não parece um link de internet.</small>}
+            {url && provavelmenteBloqueia(url) && (
+                <small className="texto-fraco">Esse site costuma não deixar ser aberto dentro de outra página: a TV pode ficar em branco.</small>
+            )}
+            {atual && (
+                <a className="controle-link-atual" href={atual} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink size={14} /> <span className="truncar">{atual}</span>
+                </a>
+            )}
+        </form>
     );
 }
 
