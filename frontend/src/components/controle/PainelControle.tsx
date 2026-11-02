@@ -178,7 +178,7 @@ function SecaoTV({ estado, enviar, telas, nome, grade = false, alvoFixo }: Secao
     const alvo = alvoFixo ?? alvoEscolhido;
     const tv = (alvo === 2 ? estado.tv2 : estado.tv) ?? { modo: "AUTO", identidade: null };
     const video = youtube.estado?.video;
-    const env: Enviar = (cmd) => enviar(cmd.acao === "TV" || cmd.acao === "TV_TELA" ? { ...cmd, alvo } : cmd);
+    const env: Enviar = (cmd) => enviar(cmd.acao === "TV" || cmd.acao === "TV_TELA" || cmd.acao === "TV_LINK" ? { ...cmd, alvo } : cmd);
 
     return (
         <section>
